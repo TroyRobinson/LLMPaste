@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "CutPaste",
+  "description": "Cut selected text and replace it with a configurable word",
+  "version": "1.0",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "contextMenus",
+    "scripting",
+    "clipboardRead",
+    "clipboardWrite"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_page": "options.html",
+  "commands": {
+    "cut-and-paste": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+O"
+      },
+      "description": "Cut selected text and replace with custom word"
+    }
+  }
+} 

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CutPaste Options</title>
+  <style>
+    body {
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 8px 15px;
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background-color: #2b6ad9;
+    }
+    .status {
+      margin-top: 15px;
+      padding: 8px;
+      border-radius: 4px;
+      display: none;
+    }
+    .success {
+      background-color: #e6f4ea;
+      color: #137333;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <h1>CutPaste Options</h1>
+  
+  <div class="form-group">
+    <label for="replacementWord">Replacement Word:</label>
+    <input type="text" id="replacementWord" placeholder="cat">
+  </div>
+  
+  <button id="saveBtn">Save Settings</button>
+  
+  <div id="status" class="status">Settings saved!</div>
+  
+  <script src="options.js"></script>
+</body>
+</html> 

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CutPaste</title>
+  <style>
+    body {
+      width: 250px;
+      padding: 15px;
+      font-family: Arial, sans-serif;
+    }
+    h1 {
+      font-size: 16px;
+      margin-bottom: 15px;
+    }
+    p {
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+    .shortcut {
+      background-color: #f0f0f0;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      margin: 0 2px;
+    }
+    button {
+      display: block;
+      margin-top: 15px;
+      padding: 5px 10px;
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #2b6ad9;
+    }
+  </style>
+</head>
+<body>
+  <h1>CutPaste</h1>
+  <p>Current replacement word: <strong id="currentWord">cat</strong></p>
+  <p>Use <span class="shortcut">Ctrl</span> + <span class="shortcut">Shift</span> + <span class="shortcut">O</span> to replace selected text.</p>
+  <button id="optionsBtn">Change Settings</button>
+  
+  <script src="popup.js"></script>
+</body>
+</html> 
