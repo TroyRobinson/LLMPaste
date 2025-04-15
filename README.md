@@ -1,14 +1,15 @@
-# CutPaste Chrome Extension
+# LLMPaste Chrome Extension
 
-A Chrome extension that cuts selected text and replaces it with a configurable word. 
+A Chrome extension that transforms selected text using AI via OpenRouter. 
 - Works in Utopia IDE & many other basic code editing platforms (Codepen, JSFiddle) although needs adjustments to work in advanced environments (Stackblitz, & many other Monaco-based environments)
 
 ## Features
 
-- Cuts the currently selected text and replaces it with "cat" (or a custom word)
+- Sends selected text to an LLM via OpenRouter API based on your prompt
+- Transforms text using models like Claude 3.5 Sonnet, GPT-4o, etc.
 - Works across all websites, including complex editors like Monaco
 - Activated with Ctrl+Shift+O keyboard shortcut
-- Configurable replacement word
+- Configurable user prompt and system prompt
 - Special handling for different editor types
 
 ## Installation
@@ -25,13 +26,18 @@ A Chrome extension that cuts selected text and replaces it with a configurable w
 
 1. Select any text on a webpage
 2. Press Ctrl+Shift+O
-3. The selected text will be cut and replaced with "cat" (or your custom word)
+3. Enter your prompt in the popup window and click "Replace"
+4. The extension will send your prompt + the selected text to the configured LLM
+5. After processing, the selected text will be replaced with the AI-generated content
 
 ## Configuration
 
-1. Click on the extension icon in the toolbar to see the current replacement word
-2. Click "Change Settings" to open the options page
-3. Enter a new replacement word and click "Save Settings"
+1. Click on the extension icon in the toolbar to set your default prompt
+2. Click "More Settings" to open the options page where you can configure:
+   - Default prompt: Instructions to give the AI along with selected text
+   - OpenRouter API key: Required to access LLM models
+   - LLM Model: Choose which model to use on OpenRouter
+   - System prompt: Set specific instructions for how the AI should respond (formatting, tone, etc.)
 
 ## Technical Overview
 
@@ -73,12 +79,22 @@ To view debug information:
 1. Right-click on a page where you're using the extension
 2. Select "Inspect" or "Inspect Element"
 3. Navigate to the "Console" tab
-4. Look for messages prefixed with "CutPaste"
+4. Look for messages prefixed with "LLMPaste"
+
+Debug logs include details about API calls, response data, and text replacement operations.
 
 ## Permissions
 
-- `storage`: Required to save your preferred replacement word
+- `storage`: Required to save your settings (prompts, API key, model choice)
 - `clipboardRead`, `clipboardWrite`: Required for clipboard operations
 - `activeTab`: Required to interact with the current tab
 - `scripting`: Required for DOM manipulation
-- `contextMenus`: Used for possible future context menu integration 
+- `contextMenus`: Used for possible future context menu integration
+- `https://openrouter.ai/*`: Required to make API calls to OpenRouter
+
+## Privacy & Security
+
+- Your OpenRouter API key is stored locally in Chrome's sync storage
+- Text selections are sent to OpenRouter's API for processing
+- No data is stored on our servers
+- System prompts can be customized to control what data is shared with the API 

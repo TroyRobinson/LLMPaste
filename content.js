@@ -12,10 +12,26 @@ function debugLog(...args) {
 }
 
 // Function to call OpenRouter API
-async function callOpenRouter(promptText, selectedText, apiKey, model) {
+async function callOpenRouter(promptText, selectedText, apiKey, model, systemPrompt) {
   debugLog('Calling OpenRouter with model:', model);
   
   try {
+    let messages = [];
+    
+    // Add system message if a system prompt was provided
+    if (systemPrompt) {
+      messages.push({
+        role: 'system',
+        content: systemPrompt
+      });
+    }
+    
+    // Add the user message with prompt and selected text
+    messages.push({
+      role: 'user',
+      content: `${promptText}\n\n${selectedText}`
+    });
+    
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -26,12 +42,7 @@ async function callOpenRouter(promptText, selectedText, apiKey, model) {
       },
       body: JSON.stringify({
         model: model,
-        messages: [
-          {
-            role: 'user',
-            content: `${promptText}\n\n${selectedText}`
-          }
-        ],
+        messages: messages,
         max_tokens: 1000
       })
     });
@@ -232,19 +243,20 @@ function showFloatingEditor() {
     // Get the selected text
     const selectedText = lastSelectedText;
     
-    // Get API key and model from storage
-    chrome.storage.sync.get(['openrouterApiKey', 'llmModel'], async (data) => {
+    // Get API key, model, and system prompt from storage
+    chrome.storage.sync.get(['openrouterApiKey', 'llmModel', 'systemPrompt'], async (data) => {
       try {
         const apiKey = data.openrouterApiKey;
         const model = data.llmModel || 'anthropic/claude-3-5-sonnet';
+        const systemPrompt = data.systemPrompt || '';
         
         if (!apiKey) {
           showNotification('Error: OpenRouter API key not set. Please set it in options.');
           return;
         }
         
-        // Call OpenRouter API
-        const generatedText = await callOpenRouter(promptText, selectedText, apiKey, model);
+        // Call OpenRouter API with the system prompt
+        const generatedText = await callOpenRouter(promptText, selectedText, apiKey, model, systemPrompt);
         
         // Perform replacement with the generated text
         performReplacement(generatedText);
@@ -335,10 +347,14 @@ function performReplacement(replacementText) {
         handleStandardSelection(selection, replacementText);
     }
     
-    console.log('Replaced with:', replacementText);
-    showNotification(`Text replaced with: "${replacementText}"`);
+    console.log('Replaced with LLM-generated text');
+    // Show a shorter notification if the replaced text is long
+    const displayText = replacementText.length > 30 
+      ? replacementText.substring(0, 30) + '...' 
+      : replacementText;
+    showNotification(`Text replaced with LLM content: "${displayText}"`);
   } catch (error) {
-    console.error('CutPaste error:', error);
+    console.error('LLMPaste error:', error);
     // Try fallback approach
     debugLog('Attempting fallback approach');
     attemptFallbackApproach(selection, replacementText);

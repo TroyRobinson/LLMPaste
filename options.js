@@ -3,21 +3,27 @@ document.addEventListener('DOMContentLoaded', () => {
   // Get reference to the input fields and save button
   const promptInput = document.getElementById('replacementWord');
   const apiKeyInput = document.getElementById('openrouterApiKey');
-  const modelSelect = document.getElementById('llmModel');
+  const modelInput = document.getElementById('llmModel');
+  const systemPromptInput = document.getElementById('systemPrompt');
   const saveBtn = document.getElementById('saveBtn');
   const statusEl = document.getElementById('status');
   
   // Load current settings
-  chrome.storage.sync.get(['replacementWord', 'openrouterApiKey', 'llmModel'], (data) => {
+  chrome.storage.sync.get(['replacementWord', 'openrouterApiKey', 'llmModel', 'systemPrompt'], (data) => {
     promptInput.value = data.replacementWord || 'cat';
     apiKeyInput.value = data.openrouterApiKey || '';
     
-    // Set the model dropdown if it exists in storage
+    // Set the model if it exists in storage
     if (data.llmModel) {
-      modelSelect.value = data.llmModel;
+      modelInput.value = data.llmModel;
     } else {
       // Default to Claude 3.5 Sonnet
-      modelSelect.value = 'anthropic/claude-3-5-sonnet';
+      modelInput.value = 'anthropic/claude-3-5-sonnet';
+    }
+    
+    // Set the system prompt if it exists in storage
+    if (data.systemPrompt) {
+      systemPromptInput.value = data.systemPrompt;
     }
   });
   
@@ -25,13 +31,15 @@ document.addEventListener('DOMContentLoaded', () => {
   saveBtn.addEventListener('click', () => {
     const newPrompt = promptInput.value.trim() || 'cat';
     const apiKey = apiKeyInput.value.trim();
-    const model = modelSelect.value;
+    const model = modelInput.value.trim() || 'anthropic/claude-3-5-sonnet';
+    const systemPrompt = systemPromptInput.value.trim();
     
     // Save to Chrome storage
     chrome.storage.sync.set({ 
       replacementWord: newPrompt,
       openrouterApiKey: apiKey,
-      llmModel: model
+      llmModel: model,
+      systemPrompt: systemPrompt
     }, () => {
       // Show success message
       statusEl.classList.add('success');
