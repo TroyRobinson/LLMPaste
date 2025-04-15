@@ -37,7 +37,7 @@
       "suggested_key": {
         "default": "Ctrl+Shift+O"
       },
-      "description": "Transform selected text using AI"
+      "description": "Transform selected text or insert AI-generated code at cursor"
     }
   }
 } 

@@ -26,11 +26,19 @@ async function callOpenRouter(promptText, selectedText, apiKey, model, systemPro
       });
     }
     
-    // Add the user message with prompt and selected text
-    messages.push({
-      role: 'user',
-      content: `${promptText}\n\n${selectedText}`
-    });
+    // Add the user message with prompt and selected text if available
+    // If no selected text, just use the prompt
+    if (selectedText) {
+      messages.push({
+        role: 'user',
+        content: `${promptText}\n\n${selectedText}`
+      });
+    } else {
+      messages.push({
+        role: 'user',
+        content: promptText
+      });
+    }
     
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -101,12 +109,14 @@ let floatingEditorInstance = null;
 function showFloatingEditor() {
   // Get selection
   const selection = window.getSelection();
-  if (!selection || !selection.toString()) {
-    showNotification('Select text first before using LLMPaste');
+  
+  // Allow empty selection for inserting code
+  if (!selection) {
+    showNotification('Cannot determine cursor position');
     return;
   }
   
-  // Store selected text and selection object for later use
+  // Store selected text (which may be empty) and selection object for later use
   lastSelectedText = selection.toString();
   debugLog('Selected text:', lastSelectedText);
   
@@ -153,7 +163,7 @@ function showFloatingEditor() {
   
   // Add title
   const title = document.createElement('div');
-  title.textContent = 'LLMPaste';
+  title.textContent = lastSelectedText ? 'LLMPaste - Transform Text' : 'LLMPaste - Insert Code';
   title.style.fontWeight = 'bold';
   title.style.fontSize = '14px';
   title.style.marginBottom = '5px';
@@ -208,9 +218,9 @@ function showFloatingEditor() {
   buttonContainer.style.display = 'flex';
   buttonContainer.style.gap = '10px';
   
-  // Create replace button
+  // Create replace/insert button
   const replaceButton = document.createElement('button');
-  replaceButton.textContent = 'Replace';
+  replaceButton.textContent = lastSelectedText ? 'Replace' : 'Insert';
   replaceButton.style.backgroundColor = '#34a853';
   replaceButton.style.color = 'white';
   replaceButton.style.border = 'none';
@@ -237,18 +247,25 @@ function showFloatingEditor() {
     // Remove the editor first to restore focus
     editorContainer.remove();
     
-    // Show a loading notification
-    showNotification('Generating text with LLM...');
-    
-    // Get the selected text
+    // Get the selected text (may be empty for insertion)
     const selectedText = lastSelectedText;
     
-    // Get API key, model, and system prompt from storage
-    chrome.storage.sync.get(['openrouterApiKey', 'llmModel', 'systemPrompt'], async (data) => {
+    // Modify notification text based on whether we're replacing or inserting
+    const actionText = selectedText ? 'Transforming selected text' : 'Creating text for insertion';
+    showNotification(`${actionText} with LLM...`);
+    
+    // Get API key, model, and appropriate system prompt from storage
+    chrome.storage.sync.get(['openrouterApiKey', 'llmModel', 'systemPrompt', 'insertSystemPrompt'], async (data) => {
       try {
         const apiKey = data.openrouterApiKey;
         const model = data.llmModel || 'anthropic/claude-3-5-sonnet';
-        const systemPrompt = data.systemPrompt || '';
+        
+        // Choose the appropriate system prompt based on whether text is selected
+        const systemPrompt = selectedText 
+          ? (data.systemPrompt || '') 
+          : (data.insertSystemPrompt || '');
+        
+        debugLog('Using system prompt for:', selectedText ? 'transformation' : 'insertion');
         
         if (!apiKey) {
           showNotification('Error: OpenRouter API key not set. Please set it in options.');
@@ -344,7 +361,12 @@ function performReplacement(replacementText) {
         break;
       
       default:
-        handleStandardSelection(selection, replacementText);
+        // If no text is selected, just insert at cursor position
+        if (selection.toString() === '') {
+          handleTextInsertion(selection, replacementText);
+        } else {
+          handleStandardSelection(selection, replacementText);
+        }
     }
     
     console.log('Replaced with LLM-generated text');
@@ -352,7 +374,10 @@ function performReplacement(replacementText) {
     const displayText = replacementText.length > 30 
       ? replacementText.substring(0, 30) + '...' 
       : replacementText;
-    showNotification(`Text replaced with LLM content: "${displayText}"`);
+    
+    // Modify notification text based on whether we're replacing or inserting
+    const actionText = selection.toString() ? 'replaced' : 'inserted';
+    showNotification(`Text ${actionText} with LLM content: "${displayText}"`);
   } catch (error) {
     console.error('LLMPaste error:', error);
     // Try fallback approach
@@ -514,6 +539,27 @@ async function handleStandardSelection(selection, replacementWord) {
   selection.addRange(range);
 }
 
+// Function to handle text insertion at cursor position
+async function handleTextInsertion(selection, textToInsert) {
+  debugLog('Handling text insertion at cursor position');
+  
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    
+    // Simply insert the text at cursor position
+    const textNode = document.createTextNode(textToInsert);
+    range.insertNode(textNode);
+    
+    // Update selection to be after the inserted text
+    range.setStartAfter(textNode);
+    range.setEndAfter(textNode);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  } else {
+    debugLog('No valid range found for insertion');
+  }
+}
+
 // Fallback approach when primary methods fail
 async function attemptFallbackApproach(selection, replacementWord) {
   debugLog('Using fallback approach');
@@ -521,13 +567,24 @@ async function attemptFallbackApproach(selection, replacementWord) {
   // Try using execCommand
   if (document.execCommand) {
     debugLog('Trying execCommand fallback');
-    document.execCommand('cut');
-    document.execCommand('insertText', false, replacementWord);
+    
+    // If selection is empty, just insert; otherwise cut and paste
+    if (selection.toString() === '') {
+      document.execCommand('insertText', false, replacementWord);
+    } else {
+      document.execCommand('cut');
+      document.execCommand('insertText', false, replacementWord);
+    }
   } else if (selection.rangeCount > 0) {
     // Last resort DOM manipulation
     debugLog('Trying direct DOM manipulation');
     const range = selection.getRangeAt(0);
-    range.deleteContents();
+    
+    // If selection is empty, don't delete anything
+    if (selection.toString() !== '') {
+      range.deleteContents();
+    }
+    
     range.insertNode(document.createTextNode(replacementWord));
   }
   

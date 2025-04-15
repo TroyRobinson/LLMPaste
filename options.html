@@ -73,13 +73,18 @@
   </div>
   
   <div class="form-group">
-    <label for="systemPrompt">System Prompt:</label>
+    <label for="systemPrompt">System Prompt (for transforming selected text):</label>
     <textarea id="systemPrompt" rows="6" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace;">You are a code-focused assistant. When responding:
 1. Provide ONLY code, no explanations, no markdown formatting
 2. Do not use backticks or code blocks
 3. Do not number lines
 4. Do not add comments unless explicitly requested
 5. Respond with working code that directly solves the user's request</textarea>
+  </div>
+  
+  <div class="form-group">
+    <label for="insertSystemPrompt">System Prompt (for inserting at cursor):</label>
+    <textarea id="insertSystemPrompt" rows="4" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace;">Generate concise, ready-to-use code based on the prompt. Provide ONLY code without explanations, markdown formatting, or backticks. Do not add comments unless explicitly requested.</textarea>
   </div>
   
   <button id="saveBtn">Save Settings</button>

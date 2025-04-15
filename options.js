@@ -5,11 +5,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const apiKeyInput = document.getElementById('openrouterApiKey');
   const modelInput = document.getElementById('llmModel');
   const systemPromptInput = document.getElementById('systemPrompt');
+  const insertSystemPromptInput = document.getElementById('insertSystemPrompt');
   const saveBtn = document.getElementById('saveBtn');
   const statusEl = document.getElementById('status');
   
   // Load current settings
-  chrome.storage.sync.get(['replacementWord', 'openrouterApiKey', 'llmModel', 'systemPrompt'], (data) => {
+  chrome.storage.sync.get(['replacementWord', 'openrouterApiKey', 'llmModel', 'systemPrompt', 'insertSystemPrompt'], (data) => {
     promptInput.value = data.replacementWord || 'cat';
     apiKeyInput.value = data.openrouterApiKey || '';
     
@@ -25,6 +26,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (data.systemPrompt) {
       systemPromptInput.value = data.systemPrompt;
     }
+    
+    // Set the insert system prompt if it exists in storage
+    if (data.insertSystemPrompt) {
+      insertSystemPromptInput.value = data.insertSystemPrompt;
+    }
   });
   
   // Save settings when the button is clicked
@@ -33,13 +39,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiKey = apiKeyInput.value.trim();
     const model = modelInput.value.trim() || 'anthropic/claude-3-5-sonnet';
     const systemPrompt = systemPromptInput.value.trim();
+    const insertSystemPrompt = insertSystemPromptInput.value.trim();
     
     // Save to Chrome storage
     chrome.storage.sync.set({ 
       replacementWord: newPrompt,
       openrouterApiKey: apiKey,
       llmModel: model,
-      systemPrompt: systemPrompt
+      systemPrompt: systemPrompt,
+      insertSystemPrompt: insertSystemPrompt
     }, () => {
       // Show success message
       statusEl.classList.add('success');
