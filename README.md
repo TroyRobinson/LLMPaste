@@ -41,7 +41,7 @@ We encountered several challenges during development:
 
 1. **Different Editor Types**: Web pages use various editor implementations (standard inputs, contenteditable elements, complex editors like Monaco). Each required a specialized approach.
 
-2. **Monaco Editor Complexity**: The most significant challenge was working with Monaco-based editors, especially in applications like Utopia React IDE. These editors have complex internal state management that doesn't respond to standard DOM manipulation.
+2. **Monaco Editor Complexity**: The most significant challenge was working with Monaco-based editors, especially in applications like Utopia React IDE -- although Utopia is actually using the full VSCode inside, not just Monaco. These editors have complex internal state management that doesn't respond to standard DOM manipulation.
 
 3. **Cut vs. Paste Operations**: While cutting text worked reliably with standard approaches, pasting the replacement text required editor-specific handling.
 
