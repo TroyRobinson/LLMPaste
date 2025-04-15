@@ -102,7 +102,7 @@ function showFloatingEditor() {
   // Get selection
   const selection = window.getSelection();
   if (!selection || !selection.toString()) {
-    showNotification('Select text first before using CutPaste');
+    showNotification('Select text first before using LLMPaste');
     return;
   }
   
@@ -414,7 +414,7 @@ function detectEditorType(element) {
 
 // Main function to cut selected text and replace with configured word - keeping for compatibility
 async function performCutAndPaste() {
-  console.log('CutPaste activated - legacy method');
+  console.log('LLMPaste activated - legacy method');
   showFloatingEditor();
 }
 
