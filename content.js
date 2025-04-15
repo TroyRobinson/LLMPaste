@@ -401,6 +401,12 @@ document.addEventListener('keydown', (event) => {
     event.preventDefault();
     showFloatingEditor();
   }
+  // New shortcut: Ctrl+Shift+I
+  if (event.ctrlKey && event.shiftKey && (event.key === 'I' || event.key === 'i')) {
+    debugLog('Keyboard shortcut detected: Ctrl+Shift+I');
+    event.preventDefault();
+    sendCtrlShiftRightArrowMultipleTimes(5);
+  }
 });
 
 // Detect the type of editor we're dealing with
@@ -558,6 +564,43 @@ async function handleTextInsertion(selection, textToInsert) {
   } else {
     debugLog('No valid range found for insertion');
   }
+}
+
+// Send Ctrl+Shift+RightArrow multiple times in quick succession
+function sendCtrlShiftRightArrowMultipleTimes(times) {
+  const activeElement = document.activeElement;
+  if (!activeElement) return;
+
+  let count = 0;
+  function sendKey() {
+    const keydown = new KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      code: 'ArrowRight',
+      keyCode: 39,
+      which: 39,
+      ctrlKey: true,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true
+    });
+    const keyup = new KeyboardEvent('keyup', {
+      key: 'ArrowRight',
+      code: 'ArrowRight',
+      keyCode: 39,
+      which: 39,
+      ctrlKey: true,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true
+    });
+    activeElement.dispatchEvent(keydown);
+    activeElement.dispatchEvent(keyup);
+    count++;
+    if (count < times) {
+      setTimeout(sendKey, 30); // 30ms between events for quick succession
+    }
+  }
+  sendKey();
 }
 
 // Fallback approach when primary methods fail
