@@ -11,6 +11,51 @@ function debugLog(...args) {
   }
 }
 
+// Function to call OpenRouter API
+async function callOpenRouter(promptText, selectedText, apiKey, model) {
+  debugLog('Calling OpenRouter with model:', model);
+  
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://github.com/llmpaste',
+        'X-Title': 'LLMPaste'
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          {
+            role: 'user',
+            content: `${promptText}\n\n${selectedText}`
+          }
+        ],
+        max_tokens: 1000
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      debugLog('OpenRouter API error:', response.status, errorText);
+      throw new Error(`API error (${response.status}): ${errorText}`);
+    }
+    
+    const data = await response.json();
+    debugLog('OpenRouter response:', data);
+    
+    if (data.choices && data.choices.length > 0 && data.choices[0].message) {
+      return data.choices[0].message.content.trim();
+    } else {
+      throw new Error('Invalid response format from OpenRouter API');
+    }
+  } catch (error) {
+    debugLog('Error in callOpenRouter:', error);
+    throw error;
+  }
+}
+
 // Function to show a temporary notification
 function showNotification(message) {
   // Create notification element
@@ -97,7 +142,7 @@ function showFloatingEditor() {
   
   // Add title
   const title = document.createElement('div');
-  title.textContent = 'CutPaste';
+  title.textContent = 'LLMPaste';
   title.style.fontWeight = 'bold';
   title.style.fontSize = '14px';
   title.style.marginBottom = '5px';
@@ -165,13 +210,13 @@ function showFloatingEditor() {
   
   replaceButton.addEventListener('click', () => {
     // Capture the text value before doing anything else
-    const textToUse = textarea.value.trim() || 'cat';
+    const promptText = textarea.value.trim() || 'cat';
     
     // Try to save to storage if available
     try {
       if (chrome && chrome.storage && chrome.storage.sync) {
-        chrome.storage.sync.set({ 'replacementWord': textToUse }, () => {
-          console.log('Replacement text saved to storage');
+        chrome.storage.sync.set({ 'replacementWord': promptText }, () => {
+          console.log('Prompt text saved to storage');
         });
       }
     } catch (error) {
@@ -181,11 +226,33 @@ function showFloatingEditor() {
     // Remove the editor first to restore focus
     editorContainer.remove();
     
-    // Slight delay to ensure the DOM updates before replacement
-    setTimeout(() => {
-      // Perform replacement
-      performReplacement(textToUse);
-    }, 50);
+    // Show a loading notification
+    showNotification('Generating text with LLM...');
+    
+    // Get the selected text
+    const selectedText = lastSelectedText;
+    
+    // Get API key and model from storage
+    chrome.storage.sync.get(['openrouterApiKey', 'llmModel'], async (data) => {
+      try {
+        const apiKey = data.openrouterApiKey;
+        const model = data.llmModel || 'anthropic/claude-3-5-sonnet';
+        
+        if (!apiKey) {
+          showNotification('Error: OpenRouter API key not set. Please set it in options.');
+          return;
+        }
+        
+        // Call OpenRouter API
+        const generatedText = await callOpenRouter(promptText, selectedText, apiKey, model);
+        
+        // Perform replacement with the generated text
+        performReplacement(generatedText);
+      } catch (error) {
+        console.error('Error calling OpenRouter:', error);
+        showNotification('Error: ' + (error.message || 'Failed to generate text with LLM'));
+      }
+    });
   });
   
   buttonContainer.appendChild(replaceButton);

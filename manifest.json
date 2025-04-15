@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "CutPaste",
-  "description": "Cut selected text and replace it with a configurable word",
+  "name": "LLMPaste",
+  "description": "Transform selected text using AI with OpenRouter",
   "version": "1.0",
   "permissions": [
     "activeTab",
@@ -11,6 +11,7 @@
     "clipboardRead",
     "clipboardWrite"
   ],
+  "host_permissions": ["https://openrouter.ai/*"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -36,7 +37,7 @@
       "suggested_key": {
         "default": "Ctrl+Shift+O"
       },
-      "description": "Cut selected text and replace with custom word"
+      "description": "Transform selected text using AI"
     }
   }
 } 
