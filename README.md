@@ -1,7 +1,7 @@
 # LLMPaste Chrome Extension
 
 A Chrome extension that transforms selected text using AI via OpenRouter. 
-- Works in Utopia IDE & many other basic code editing platforms (Codepen, JSFiddle) although needs adjustments to work in advanced environments (Stackblitz, & many other Monaco-based environments)
+- Works in Utopia IDE (React Editor/Designer) [VScode/Monaco based] and may work in other editors although not tested, probably needs adjustments.
 
 ## Features
 
