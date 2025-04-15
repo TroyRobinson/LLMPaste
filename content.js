@@ -11,11 +11,278 @@ function debugLog(...args) {
   }
 }
 
+// Function to show a temporary notification
+function showNotification(message) {
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.textContent = message;
+  notification.style.position = 'fixed';
+  notification.style.bottom = '20px';
+  notification.style.right = '20px';
+  notification.style.padding = '10px 15px';
+  notification.style.background = '#4285f4';
+  notification.style.color = 'white';
+  notification.style.borderRadius = '4px';
+  notification.style.zIndex = '9999999';
+  notification.style.fontSize = '14px';
+  notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+  
+  // Add to document
+  document.body.appendChild(notification);
+  
+  // Remove after delay
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    notification.style.transition = 'opacity 0.5s';
+    setTimeout(() => notification.remove(), 500);
+  }, 3000);
+}
+
+// Floating editor instance reference
+let floatingEditorInstance = null;
+
+// Show the floating editor for text replacement
+function showFloatingEditor() {
+  // Get selection
+  const selection = window.getSelection();
+  if (!selection || !selection.toString()) {
+    showNotification('Select text first before using CutPaste');
+    return;
+  }
+  
+  // Store selected text and selection object for later use
+  lastSelectedText = selection.toString();
+  debugLog('Selected text:', lastSelectedText);
+  
+  // Store the selection object for later use
+  originalSelection = selection;
+  
+  // Clone the selection ranges to preserve them
+  if (selection.rangeCount > 0) {
+    const ranges = [];
+    for (let i = 0; i < selection.rangeCount; i++) {
+      ranges.push(selection.getRangeAt(i).cloneRange());
+    }
+    
+    // Create a new selection object
+    originalSelection = {
+      toString: () => lastSelectedText,
+      rangeCount: ranges.length,
+      getRangeAt: (i) => ranges[i],
+      removeAllRanges: () => {},
+      addRange: () => {}
+    };
+  }
+  
+  // Remove any existing floating editor
+  if (floatingEditorInstance) {
+    floatingEditorInstance.remove();
+  }
+  
+  // Create floating editor container
+  const editorContainer = document.createElement('div');
+  editorContainer.style.position = 'fixed';
+  editorContainer.style.bottom = '20px';
+  editorContainer.style.left = '50%';
+  editorContainer.style.transform = 'translateX(-50%)';
+  editorContainer.style.padding = '15px';
+  editorContainer.style.backgroundColor = 'white';
+  editorContainer.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+  editorContainer.style.borderRadius = '8px';
+  editorContainer.style.zIndex = '9999999';
+  editorContainer.style.display = 'flex';
+  editorContainer.style.flexDirection = 'column';
+  editorContainer.style.gap = '10px';
+  editorContainer.style.minWidth = '250px';
+  
+  // Add title
+  const title = document.createElement('div');
+  title.textContent = 'CutPaste';
+  title.style.fontWeight = 'bold';
+  title.style.fontSize = '14px';
+  title.style.marginBottom = '5px';
+  editorContainer.appendChild(title);
+  
+  // Add close button
+  const closeButton = document.createElement('div');
+  closeButton.textContent = '×';
+  closeButton.style.position = 'absolute';
+  closeButton.style.top = '10px';
+  closeButton.style.right = '15px';
+  closeButton.style.cursor = 'pointer';
+  closeButton.style.fontSize = '18px';
+  closeButton.style.fontWeight = 'bold';
+  closeButton.addEventListener('click', () => editorContainer.remove());
+  editorContainer.appendChild(closeButton);
+  
+  // Create input field
+  const textarea = document.createElement('textarea');
+  textarea.style.width = '100%';
+  textarea.style.minHeight = '60px';
+  textarea.style.padding = '8px';
+  textarea.style.borderRadius = '4px';
+  textarea.style.border = '1px solid #ccc';
+  textarea.style.fontSize = '14px';
+  
+  // Default value
+  textarea.value = 'cat';
+  
+  // Try to load from storage - use try/catch to handle potential errors
+  try {
+    if (chrome && chrome.storage && chrome.storage.sync) {
+      chrome.storage.sync.get('replacementWord', (data) => {
+        if (data && data.replacementWord) {
+          textarea.value = data.replacementWord;
+        }
+        textarea.select();
+      });
+    } else {
+      console.error('Chrome storage API not available');
+      textarea.select();
+    }
+  } catch (error) {
+    console.error('Error accessing chrome storage:', error);
+    textarea.select();
+  }
+  
+  editorContainer.appendChild(textarea);
+  
+  // Create buttons container
+  const buttonContainer = document.createElement('div');
+  buttonContainer.style.display = 'flex';
+  buttonContainer.style.gap = '10px';
+  
+  // Create replace button
+  const replaceButton = document.createElement('button');
+  replaceButton.textContent = 'Replace';
+  replaceButton.style.backgroundColor = '#34a853';
+  replaceButton.style.color = 'white';
+  replaceButton.style.border = 'none';
+  replaceButton.style.borderRadius = '4px';
+  replaceButton.style.padding = '8px 12px';
+  replaceButton.style.cursor = 'pointer';
+  replaceButton.style.fontSize = '14px';
+  
+  replaceButton.addEventListener('click', () => {
+    // Capture the text value before doing anything else
+    const textToUse = textarea.value.trim() || 'cat';
+    
+    // Try to save to storage if available
+    try {
+      if (chrome && chrome.storage && chrome.storage.sync) {
+        chrome.storage.sync.set({ 'replacementWord': textToUse }, () => {
+          console.log('Replacement text saved to storage');
+        });
+      }
+    } catch (error) {
+      console.error('Error saving to chrome storage:', error);
+    }
+    
+    // Remove the editor first to restore focus
+    editorContainer.remove();
+    
+    // Slight delay to ensure the DOM updates before replacement
+    setTimeout(() => {
+      // Perform replacement
+      performReplacement(textToUse);
+    }, 50);
+  });
+  
+  buttonContainer.appendChild(replaceButton);
+  
+  // Create cancel button
+  const cancelButton = document.createElement('button');
+  cancelButton.textContent = 'Cancel';
+  cancelButton.style.backgroundColor = '#f1f1f1';
+  cancelButton.style.color = '#333';
+  cancelButton.style.border = 'none';
+  cancelButton.style.borderRadius = '4px';
+  cancelButton.style.padding = '8px 12px';
+  cancelButton.style.cursor = 'pointer';
+  cancelButton.style.fontSize = '14px';
+  
+  cancelButton.addEventListener('click', () => {
+    editorContainer.remove();
+  });
+  
+  buttonContainer.appendChild(cancelButton);
+  editorContainer.appendChild(buttonContainer);
+  
+  // Handle Enter key in textarea
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      replaceButton.click();
+    } else if (e.key === 'Escape') {
+      editorContainer.remove();
+    }
+  });
+  
+  // Add to page
+  document.body.appendChild(editorContainer);
+  
+  // Focus the textarea
+  setTimeout(() => textarea.focus(), 0);
+  
+  // Save reference
+  floatingEditorInstance = editorContainer;
+}
+
+// Store original selection range to use later
+let originalSelection = null;
+
+// Perform text replacement with the provided replacement text
+function performReplacement(replacementText) {
+  // Try to use stored selection first, otherwise get current selection
+  const selection = originalSelection || window.getSelection();
+  originalSelection = null; // Clear after use
+  
+  if (!selection || (selection.rangeCount === 0)) {
+    showNotification('Selection was lost - please try again');
+    return;
+  }
+  
+  debugLog('Selection for replacement:', selection.toString());
+  
+  // Get the active element or document.body as fallback
+  const activeElement = document.activeElement || document.body;
+  const editorType = detectEditorType(activeElement);
+  console.log('Editor type:', editorType);
+  
+  try {
+    // Handle based on editor type
+    switch (editorType) {
+      case 'monaco':
+        handleMonacoEditor(replacementText);
+        break;
+      
+      case 'input':
+        handleStandardInput(activeElement, selection, replacementText);
+        break;
+      
+      case 'contenteditable':
+        handleContentEditable(selection, replacementText);
+        break;
+      
+      default:
+        handleStandardSelection(selection, replacementText);
+    }
+    
+    console.log('Replaced with:', replacementText);
+    showNotification(`Text replaced with: "${replacementText}"`);
+  } catch (error) {
+    console.error('CutPaste error:', error);
+    // Try fallback approach
+    debugLog('Attempting fallback approach');
+    attemptFallbackApproach(selection, replacementText);
+  }
+}
+
 // Listen for messages from the background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'cutAndPaste') {
     debugLog('Message received to perform cutAndPaste');
-    performCutAndPaste();
+    showFloatingEditor();
   }
 });
 
@@ -24,7 +291,7 @@ document.addEventListener('keydown', (event) => {
   if (event.ctrlKey && event.shiftKey && event.key === 'O') {
     debugLog('Keyboard shortcut detected: Ctrl+Shift+O');
     event.preventDefault();
-    performCutAndPaste();
+    showFloatingEditor();
   }
 });
 
@@ -62,57 +329,10 @@ function detectEditorType(element) {
   return 'standard';
 }
 
-// Main function to cut selected text and replace with configured word
+// Main function to cut selected text and replace with configured word - keeping for compatibility
 async function performCutAndPaste() {
-  console.log('CutPaste activated');
-  
-  const selection = window.getSelection();
-  if (!selection || !selection.toString()) {
-    console.log('No text selected');
-    return;
-  }
-  
-  // Store the selected text
-  lastSelectedText = selection.toString();
-  debugLog('Selected text:', lastSelectedText);
-  
-  // Get the active element and detect editor type
-  const activeElement = document.activeElement;
-  const editorType = detectEditorType(activeElement);
-  console.log('Editor type:', editorType);
-  
-  // Get the replacement word from storage
-  chrome.storage.sync.get('replacementWord', async (data) => {
-    const replacementWord = data.replacementWord || 'cat';
-    debugLog('Replacement word:', replacementWord);
-    
-    try {
-      // Handle based on editor type
-      switch (editorType) {
-        case 'monaco':
-          await handleMonacoEditor(replacementWord);
-          break;
-        
-        case 'input':
-          await handleStandardInput(activeElement, selection, replacementWord);
-          break;
-        
-        case 'contenteditable':
-          await handleContentEditable(selection, replacementWord);
-          break;
-        
-        default:
-          await handleStandardSelection(selection, replacementWord);
-      }
-      
-      console.log('Replaced with:', replacementWord);
-    } catch (error) {
-      console.error('CutPaste error:', error);
-      // Try fallback approach
-      debugLog('Attempting fallback approach');
-      await attemptFallbackApproach(selection, replacementWord);
-    }
-  });
+  console.log('CutPaste activated - legacy method');
+  showFloatingEditor();
 }
 
 // Handle Monaco editor (optimized for Utopia)
@@ -227,4 +447,6 @@ async function attemptFallbackApproach(selection, replacementWord) {
     range.deleteContents();
     range.insertNode(document.createTextNode(replacementWord));
   }
+  
+  showNotification(`Text replaced with: "${replacementWord}"`);
 } 
