@@ -382,8 +382,8 @@ async function captureSelectionViaClipboard() {
     // Copy the selection to clipboard
     document.execCommand('copy');
     
-    // Small delay to ensure clipboard operation completes
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // More substantial delay to ensure clipboard operation fully completes
+    await new Promise(resolve => setTimeout(resolve, 150));
     
     // Read from clipboard
     const clipboardText = await navigator.clipboard.readText();
