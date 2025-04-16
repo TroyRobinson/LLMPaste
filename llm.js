@@ -53,7 +53,7 @@ export async function callLLM({ promptText, selectedText, apiKey, model, systemP
     body: JSON.stringify({
       model: model,
       messages: messages,
-      max_tokens: 1000
+      max_tokens: 10000
     })
   });
 

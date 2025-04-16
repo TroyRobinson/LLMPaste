@@ -62,9 +62,11 @@ function showFloatingEditor() {
     return;
   }
   
-  // Store selected text (which may be empty) and selection object for later use
-  lastSelectedText = selection.toString();
-  debugLog('Selected text:', lastSelectedText);
+  // Only update lastSelectedText if we haven't already captured it via clipboard
+  if (!lastSelectedText || lastSelectedText.length === 0) {
+    lastSelectedText = selection.toString();
+  }
+  debugLog('Selected text (FULL):', lastSelectedText);
   
   // Store the selection object for later use
   originalSelection = selection;
@@ -235,7 +237,9 @@ function showFloatingEditor() {
             // Ensure llm.js is loaded before using callLLM
             await llmReady;
             // Call LLM API with the system prompt
+            debugLog('Sending to LLM (FULL):', selectedText);
             const generatedText = await callLLM({ promptText, selectedText, apiKey, model, systemPrompt });
+            debugLog('LLM response (FULL):', generatedText);
             // Perform replacement with the generated text
             performReplacement(generatedText);
           } catch (error) {
@@ -306,7 +310,8 @@ function performReplacement(replacementText) {
     return;
   }
   
-  debugLog('Selection for replacement:', selection.toString());
+  // Use the lastSelectedText that was captured via clipboard rather than requerying selection
+  debugLog('Selection for replacement (FULL):', lastSelectedText);
   
   // Get the active element or document.body as fallback
   const activeElement = document.activeElement || document.body;
@@ -358,16 +363,50 @@ function performReplacement(replacementText) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'cutAndPaste') {
     debugLog('Message received to perform cutAndPaste');
-    showFloatingEditor();
+    captureSelectionViaClipboard().then(() => {
+      showFloatingEditor();
+    });
   }
 });
+
+// Function to capture selection text via clipboard
+async function captureSelectionViaClipboard() {
+  try {
+    // Check if we have a selection
+    const selection = window.getSelection();
+    if (!selection) {
+      debugLog('No selection available');
+      return;
+    }
+    
+    // Copy the selection to clipboard
+    document.execCommand('copy');
+    
+    // Small delay to ensure clipboard operation completes
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    // Read from clipboard
+    const clipboardText = await navigator.clipboard.readText();
+    debugLog('Clipboard capture: ' + clipboardText.length + ' characters');
+    debugLog('Clipboard text (FULL):', clipboardText);
+    
+    // Store the text for LLM processing
+    if (clipboardText && clipboardText.length > 0) {
+      lastSelectedText = clipboardText;
+    }
+  } catch (error) {
+    debugLog('Clipboard capture failed: ' + error.message);
+  }
+}
 
 // Also allow direct keyboard shortcut handling as a backup
 document.addEventListener('keydown', (event) => {
   if (event.ctrlKey && event.shiftKey && event.key === 'O') {
     debugLog('Keyboard shortcut detected: Ctrl+Shift+O');
     event.preventDefault();
-    showFloatingEditor();
+    captureSelectionViaClipboard().then(() => {
+      showFloatingEditor();
+    });
   }
   // New shortcut: Ctrl+Shift+I
   if (event.ctrlKey && event.shiftKey && (event.key === 'I' || event.key === 'i')) {
@@ -417,46 +456,44 @@ async function performCutAndPaste() {
   showFloatingEditor();
 }
 
-// Handle Monaco editor (optimized for Utopia)
+// Handle Monaco editor
 async function handleMonacoEditor(replacementWord) {
-  debugLog('Handling Monaco editor');
+  debugLog('Handling Monaco editor replacement');
   
-  // 1. Cut the selected text - this works reliably
-  document.execCommand('cut');
-  debugLog('Cut executed via execCommand');
-  
-  // 2. Create and dispatch a paste event with the replacement word
-  const clipboardData = new DataTransfer();
-  clipboardData.setData('text/plain', replacementWord);
-  
-  const pasteEvent = new ClipboardEvent('paste', {
-    bubbles: true,
-    cancelable: true,
-    clipboardData: clipboardData
-  });
-  
-  // Find the Monaco editor container
-  const monacoContainer = document.querySelector('.react-monaco-editor-container') || 
+  try {
+    // Cut the selected text
+    document.execCommand('cut');
+    
+    // Create and dispatch a paste event with the replacement word
+    const clipboardData = new DataTransfer();
+    clipboardData.setData('text/plain', replacementWord);
+    
+    const pasteEvent = new ClipboardEvent('paste', {
+      bubbles: true,
+      cancelable: true,
+      clipboardData: clipboardData
+    });
+    
+    // Find the Monaco editor container
+    const monacoContainer = document.querySelector('.react-monaco-editor-container') || 
                           document.querySelector('.monaco-editor');
-  
-  debugLog('Monaco container found:', !!monacoContainer);
-  
-  if (monacoContainer) {
-    // Find the most likely target for paste events
-    const target = monacoContainer.querySelector('[tabindex], textarea') || 
-                   document.activeElement || 
-                   monacoContainer;
     
-    debugLog('Paste target:', target);
+    // Target the appropriate element
+    const target = monacoContainer ? 
+                 monacoContainer.querySelector('[tabindex], textarea') || 
+                 document.activeElement || 
+                 monacoContainer :
+                 document.activeElement;
     
-    // Focus and dispatch
-    target.focus();
-    const result = target.dispatchEvent(pasteEvent);
-    debugLog('Paste event result:', result);
-  } else if (document.activeElement) {
-    // Fallback to active element
-    debugLog('Using active element as paste target:', document.activeElement);
-    document.activeElement.dispatchEvent(pasteEvent);
+    if (target) {
+      target.focus();
+      target.dispatchEvent(pasteEvent);
+      debugLog('Replacement applied to editor');
+    }
+  } catch (error) {
+    debugLog('Monaco replacement failed: ' + error.message);
+    // Simple fallback
+    document.execCommand('insertText', false, replacementWord);
   }
 }
 
