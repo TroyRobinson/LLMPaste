@@ -237,9 +237,7 @@ function showFloatingEditor() {
             // Ensure llm.js is loaded before using callLLM
             await llmReady;
             // Call LLM API with the system prompt
-            debugLog('Sending to LLM (FULL):', selectedText);
             const generatedText = await callLLM({ promptText, selectedText, apiKey, model, systemPrompt });
-            debugLog('LLM response (FULL):', generatedText);
             // Perform replacement with the generated text
             performReplacement(generatedText);
           } catch (error) {
@@ -311,8 +309,6 @@ function performReplacement(replacementText) {
   }
   
   // Use the lastSelectedText that was captured via clipboard rather than requerying selection
-  debugLog('Selection for replacement (FULL):', lastSelectedText);
-  
   // Get the active element or document.body as fallback
   const activeElement = document.activeElement || document.body;
   const editorType = detectEditorType(activeElement);
@@ -379,16 +375,25 @@ async function captureSelectionViaClipboard() {
       return;
     }
     
+    // Detect browser environment
+    const isChrome = navigator.userAgent.indexOf('Chrome') > -1;
+    const isEdge = navigator.userAgent.indexOf('Edg') > -1;
+    
     // Copy the selection to clipboard
     document.execCommand('copy');
     
-    // More substantial delay to ensure clipboard operation fully completes
-    await new Promise(resolve => setTimeout(resolve, 150));
+    // Adaptive delay - less for Chrome/Edge which tend to be faster
+    const delay = isChrome || isEdge ? 75 : 150;
+    await new Promise(resolve => setTimeout(resolve, delay));
     
-    // Read from clipboard
-    const clipboardText = await navigator.clipboard.readText();
+    // Read from clipboard - with timeout to prevent hanging
+    const clipboardPromise = navigator.clipboard.readText();
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Clipboard read timeout')), 500)
+    );
+    
+    const clipboardText = await Promise.race([clipboardPromise, timeoutPromise]);
     debugLog('Clipboard capture: ' + clipboardText.length + ' characters');
-    debugLog('Clipboard text (FULL):', clipboardText);
     
     // Store the text for LLM processing
     if (clipboardText && clipboardText.length > 0) {
