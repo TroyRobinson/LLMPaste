@@ -1,3 +1,4 @@
+// NOTE: All LLM API logic must be handled via llm.js. Do not call LLM APIs directly here.
 // Listen for keyboard shortcut command
 chrome.commands.onCommand.addListener((command) => {
   if (command === 'cut-and-paste') {

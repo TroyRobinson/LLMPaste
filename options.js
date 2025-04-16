@@ -1,3 +1,4 @@
+// NOTE: All LLM API logic must be handled via llm.js. Do not call LLM APIs directly here.
 // When the options page has loaded
 document.addEventListener('DOMContentLoaded', () => {
   // Get reference to the input fields and save button

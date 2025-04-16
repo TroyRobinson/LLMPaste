@@ -11,69 +11,15 @@ function debugLog(...args) {
   }
 }
 
-// Function to call OpenRouter API
-async function callOpenRouter(promptText, selectedText, apiKey, model, systemPrompt) {
-  debugLog('Calling OpenRouter with model:', model);
-  
-  try {
-    let messages = [];
-    
-    // Add system message if a system prompt was provided
-    if (systemPrompt) {
-      messages.push({
-        role: 'system',
-        content: systemPrompt
-      });
-    }
-    
-    // Add the user message with prompt and selected text if available
-    // If no selected text, just use the prompt
-    if (selectedText) {
-      messages.push({
-        role: 'user',
-        content: `${promptText}\n\n${selectedText}`
-      });
-    } else {
-      messages.push({
-        role: 'user',
-        content: promptText
-      });
-    }
-    
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://github.com/llmpaste',
-        'X-Title': 'LLMPaste'
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: messages,
-        max_tokens: 1000
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      debugLog('OpenRouter API error:', response.status, errorText);
-      throw new Error(`API error (${response.status}): ${errorText}`);
-    }
-    
-    const data = await response.json();
-    debugLog('OpenRouter response:', data);
-    
-    if (data.choices && data.choices.length > 0 && data.choices[0].message) {
-      return data.choices[0].message.content.trim();
-    } else {
-      throw new Error('Invalid response format from OpenRouter API');
-    }
-  } catch (error) {
-    debugLog('Error in callOpenRouter:', error);
-    throw error;
-  }
-}
+// Import callLLM from llm.js (dynamic import for Chrome extension compatibility)
+let callLLM;
+let llmReady = (async () => {
+  const llmModule = await import(chrome.runtime.getURL('llm.js'));
+  callLLM = llmModule.callLLM;
+})();
+
+// Usage: await callLLM({ promptText, selectedText, apiKey, model, systemPrompt })
+// (See below for replacement of all callOpenRouter usages)
 
 // Function to show a temporary notification
 function showNotification(message) {
@@ -197,6 +143,11 @@ function showFloatingEditor() {
   try {
     if (chrome && chrome.storage && chrome.storage.sync) {
       chrome.storage.sync.get('replacementWord', (data) => {
+        if (chrome.runtime.lastError) {
+          showNotification('Error accessing Chrome storage: ' + chrome.runtime.lastError.message);
+          textarea.select();
+          return;
+        }
         if (data && data.replacementWord) {
           textarea.value = data.replacementWord;
         }
@@ -204,10 +155,12 @@ function showFloatingEditor() {
       });
     } else {
       console.error('Chrome storage API not available');
+      showNotification('Chrome storage API not available');
       textarea.select();
     }
   } catch (error) {
     console.error('Error accessing chrome storage:', error);
+    showNotification('Extension context invalidated. Please reload the page or extension.');
     textarea.select();
   }
   
@@ -237,11 +190,16 @@ function showFloatingEditor() {
     try {
       if (chrome && chrome.storage && chrome.storage.sync) {
         chrome.storage.sync.set({ 'replacementWord': promptText }, () => {
+          if (chrome.runtime.lastError) {
+            showNotification('Error saving to Chrome storage: ' + chrome.runtime.lastError.message);
+            return;
+          }
           console.log('Prompt text saved to storage');
         });
       }
     } catch (error) {
       console.error('Error saving to chrome storage:', error);
+      showNotification('Extension context invalidated. Please reload the page or extension.');
     }
     
     // Remove the editor first to restore focus
@@ -255,33 +213,43 @@ function showFloatingEditor() {
     showNotification(`${actionText} with LLM...`);
     
     // Get API key, model, and appropriate system prompt from storage
-    chrome.storage.sync.get(['openrouterApiKey', 'llmModel', 'systemPrompt', 'insertSystemPrompt'], async (data) => {
-      try {
-        const apiKey = data.openrouterApiKey;
-        const model = data.llmModel || 'anthropic/claude-3-5-sonnet';
-        
-        // Choose the appropriate system prompt based on whether text is selected
-        const systemPrompt = selectedText 
-          ? (data.systemPrompt || '') 
-          : (data.insertSystemPrompt || '');
-        
-        debugLog('Using system prompt for:', selectedText ? 'transformation' : 'insertion');
-        
-        if (!apiKey) {
-          showNotification('Error: OpenRouter API key not set. Please set it in options.');
-          return;
-        }
-        
-        // Call OpenRouter API with the system prompt
-        const generatedText = await callOpenRouter(promptText, selectedText, apiKey, model, systemPrompt);
-        
-        // Perform replacement with the generated text
-        performReplacement(generatedText);
-      } catch (error) {
-        console.error('Error calling OpenRouter:', error);
-        showNotification('Error: ' + (error.message || 'Failed to generate text with LLM'));
+    try {
+      if (chrome && chrome.storage && chrome.storage.sync) {
+        chrome.storage.sync.get(['openrouterApiKey', 'llmModel', 'systemPrompt', 'insertSystemPrompt'], async (data) => {
+          if (chrome.runtime.lastError) {
+            showNotification('Error accessing Chrome storage: ' + chrome.runtime.lastError.message);
+            return;
+          }
+          try {
+            const apiKey = data.openrouterApiKey;
+            const model = data.llmModel || 'anthropic/claude-3-5-sonnet';
+            // Choose the appropriate system prompt based on whether text is selected
+            const systemPrompt = selectedText 
+              ? (data.systemPrompt || '') 
+              : (data.insertSystemPrompt || '');
+            debugLog('Using system prompt for:', selectedText ? 'transformation' : 'insertion');
+            if (!apiKey) {
+              showNotification('Error: OpenRouter API key not set. Please set it in options.');
+              return;
+            }
+            // Ensure llm.js is loaded before using callLLM
+            await llmReady;
+            // Call LLM API with the system prompt
+            const generatedText = await callLLM({ promptText, selectedText, apiKey, model, systemPrompt });
+            // Perform replacement with the generated text
+            performReplacement(generatedText);
+          } catch (error) {
+            console.error('Error calling OpenRouter:', error);
+            showNotification('Error: ' + (error.message || 'Failed to generate text with LLM'));
+          }
+        });
+      } else {
+        showNotification('Chrome storage API not available');
       }
-    });
+    } catch (error) {
+      console.error('Error accessing chrome storage:', error);
+      showNotification('Extension context invalidated. Please reload the page or extension.');
+    }
   });
   
   buttonContainer.appendChild(replaceButton);

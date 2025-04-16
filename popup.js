@@ -1,3 +1,4 @@
+// NOTE: All LLM API logic must be handled via llm.js. Do not call LLM APIs directly here.
 // When the popup HTML has loaded
 document.addEventListener('DOMContentLoaded', () => {
   const replacementTextarea = document.getElementById('replacementText');
