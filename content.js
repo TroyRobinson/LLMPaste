@@ -239,24 +239,54 @@ function showFloatingEditor() {
   modelInfoContainer.appendChild(shortcutsInfo);
   editorContainer.appendChild(modelInfoContainer);
   
-  // Update active model info from storage
-  chrome.storage.local.get(['activeModelSlot', 'activeModelName', 'activeModelProvider'], (data) => {
-    const modelNameEl = document.getElementById('activeModelName');
-    const modelSlotEl = document.getElementById('activeModelSlot');
+  // Update active model info from storage - always default to slot 1
+  // First try to get slot 1 info directly
+  chrome.storage.sync.get(['modelSlot1Provider', 'modelSlot1Model'], (slot1Data) => {
+    const defaultProvider = slot1Data.modelSlot1Provider || 'openrouter';
+    const defaultModel = slot1Data.modelSlot1Model || 'anthropic/claude-3-5-sonnet';
     
-    if (modelNameEl && data.activeModelName) {
-      // Format the display name (show only model part after the slash if present)
-      let displayName = data.activeModelName;
-      if (displayName.includes('/')) {
-        displayName = displayName.split('/')[1];
+    // Get active model if exists, otherwise use slot 1
+    chrome.storage.local.get(['activeModelSlot', 'activeModelName', 'activeModelProvider'], (data) => {
+      const modelNameEl = document.getElementById('activeModelName');
+      const modelSlotEl = document.getElementById('activeModelSlot');
+      
+      // If no active model is set or it's not slot 1, always show slot 1 initially
+      const useSlot1 = !data.activeModelSlot || data.activeModelSlot === 1;
+      
+      if (modelNameEl) {
+        // Format the display name (show only model part after the slash if present)
+        let displayName;
+        
+        if (useSlot1) {
+          displayName = defaultModel;
+        } else {
+          displayName = data.activeModelName || defaultModel;
+        }
+        
+        if (displayName.includes('/')) {
+          displayName = displayName.split('/')[1];
+        }
+        
+        const provider = useSlot1 ? defaultProvider : (data.activeModelProvider || defaultProvider);
+        modelNameEl.textContent = `${displayName} (${provider})`;
       }
       
-      modelNameEl.textContent = `${displayName} (${data.activeModelProvider || 'default'})`;
-    }
-    
-    if (modelSlotEl && data.activeModelSlot) {
-      modelSlotEl.textContent = `(slot ${data.activeModelSlot})`;
-    }
+      // Always show slot 1 as the initial active slot
+      if (modelSlotEl) {
+        modelSlotEl.textContent = `(slot ${useSlot1 ? 1 : data.activeModelSlot})`;
+      }
+      
+      // Always make sure slot 1 is stored in local storage
+      // so future requests default to slot 1 until explicitly changed
+      if (!data.activeModelSlot) {
+        chrome.storage.local.set({
+          'activeModelSlot': 1,
+          'activeModelName': defaultModel,
+          'activeModelProvider': defaultProvider
+        });
+        debugLog('Set initial slot to slot 1');
+      }
+    });
   });
   
   // Add close button
@@ -368,13 +398,12 @@ function showFloatingEditor() {
           'sambanovaApiKey',
           'klusteraiApiKey',
           'lambdaaiApiKey',
-          // Models
-          'openrouterModel', 
-          'cerebrasModel',
-          'groqModel',
-          'sambanovaModel',
-          'klusteraiModel',
-          'lambdaaiModel',
+          // Model slots
+          'modelSlot1Provider', 'modelSlot1Model',
+          'modelSlot2Provider', 'modelSlot2Model',
+          'modelSlot3Provider', 'modelSlot3Model',
+          'modelSlot4Provider', 'modelSlot4Model',
+          'modelSlot5Provider', 'modelSlot5Model',
           // Prompts
           'systemPrompt', 
           'insertSystemPrompt'
@@ -427,11 +456,10 @@ function showFloatingEditor() {
                 model = slotModel;
               }
               
-              // Get API key based on provider
+              // Get API key based on provider - no more relying on provider-specific model defaults
               switch (provider) {
                 case 'cerebras':
                   apiKey = data.cerebrasApiKey;
-                  if (!model) model = data.cerebrasModel || 'llama3.1-8b';
                   if (!apiKey) {
                     showNotification('Error: Cerebras API key not set. Please set it in options.');
                     return;
@@ -440,7 +468,6 @@ function showFloatingEditor() {
                 
                 case 'groq':
                   apiKey = data.groqApiKey;
-                  if (!model) model = data.groqModel || 'llama-3.3-70b-versatile';
                   if (!apiKey) {
                     showNotification('Error: Groq API key not set. Please set it in options.');
                     return;
@@ -449,7 +476,6 @@ function showFloatingEditor() {
                 
                 case 'sambanova':
                   apiKey = data.sambanovaApiKey;
-                  if (!model) model = data.sambanovaModel || 'Llama-4-Maverick-17B-128E-Instruct';
                   if (!apiKey) {
                     showNotification('Error: SambaNova API key not set. Please set it in options.');
                     return;
@@ -458,7 +484,6 @@ function showFloatingEditor() {
                 
                 case 'klusterai':
                   apiKey = data.klusteraiApiKey;
-                  if (!model) model = data.klusteraiModel || 'klusterai/Meta-Llama-3.1-8B-Instruct-Turbo';
                   if (!apiKey) {
                     showNotification('Error: Kluster.ai API key not set. Please set it in options.');
                     return;
@@ -467,7 +492,6 @@ function showFloatingEditor() {
                 
                 case 'lambdaai':
                   apiKey = data.lambdaaiApiKey;
-                  if (!model) model = data.lambdaaiModel || 'llama-4-maverick-17b-128e-instruct-fp8';
                   if (!apiKey) {
                     showNotification('Error: Lambda.ai API key not set. Please set it in options.');
                     return;
@@ -477,7 +501,6 @@ function showFloatingEditor() {
                 case 'openrouter':
                 default:
                   apiKey = data.openrouterApiKey;
-                  if (!model) model = data.openrouterModel || 'anthropic/claude-3-5-sonnet';
                   if (!apiKey) {
                     showNotification('Error: OpenRouter API key not set. Please set it in options.');
                     return;
@@ -485,10 +508,29 @@ function showFloatingEditor() {
                   break;
               }
               
+              // If no model was specified, use default
+              if (!model) {
+                model = 'anthropic/claude-3-5-sonnet'; // Default if nothing else is specified
+              }
+              
               debugLog(`Using provider: ${provider}, model: ${model}, slot: ${activeSlot}`);
               
-              // Reset the active slot after use
-              chrome.storage.local.remove('activeModelSlot');
+              // Do NOT reset the active slot for storage - we just won't use it next time
+              // Instead, we'll explicitly store slot 1 as the default for next time
+              if (activeSlot > 1) {
+                // Get slot 1 provider and model for future use
+                const slot1Provider = data.modelSlot1Provider || 'openrouter';
+                const slot1Model = data.modelSlot1Model || 'anthropic/claude-3-5-sonnet';
+                
+                // Store slot 1 as the active slot for next time
+                chrome.storage.local.set({
+                  'activeModelSlot': 1,
+                  'activeModelName': slot1Model,
+                  'activeModelProvider': slot1Provider
+                });
+                
+                debugLog('Reset to slot 1 for next use:', slot1Provider, slot1Model);
+              }
             
               // Choose the appropriate system prompt based on whether text is selected
               const systemPrompt = selectedText 

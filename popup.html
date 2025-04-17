@@ -1,3 +1,5 @@
+<!-- For the popup that appears under the extension icon when pressed-->
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -47,21 +49,6 @@
 </head>
 <body>
   <h1>LLMPaste</h1>
-  <div id="activeModel" style="margin-bottom: 10px; font-size: 13px; color: #666; display: flex; align-items: center; justify-content: space-between; border: 1px solid #eee; padding: 8px; border-radius: 4px; background-color: #f9f9f9;">
-    <span>Active: <span id="modelName" style="font-weight: bold;">Loading...</span> <span id="slotNumber">(slot 1)</span></span>
-    <a href="#" id="showShortcuts" style="font-size: 12px; color: #4285f4; text-decoration: none;">Show shortcuts</a>
-  </div>
-  <div id="shortcutsInfo" style="display: none; margin-bottom: 10px; background-color: #f5f5f5; padding: 8px; border-radius: 4px; font-size: 12px;">
-    <p style="margin: 0 0 5px 0; font-weight: bold;">Model Selection Shortcuts:</p>
-    <ul style="margin: 0; padding-left: 20px;">
-      <li>Enter: Slot 1 (default)</li>
-      <li>Shift+Enter: Slot 2</li>
-      <li>Ctrl+Enter: Slot 3</li>
-      <li>Alt/Option+Enter: Slot 4</li>
-      <li>Command/Meta+Enter: Slot 5</li>
-    </ul>
-    <p style="margin: 5px 0 0 0; font-style: italic;">Press and hold modifier key before pressing Enter</p>
-  </div>
   <p style="margin-bottom: 5px;">Enter prompt for LLM:</p>
   <textarea id="replacementText" rows="3" style="width:100%; margin-bottom:10px;">Rewrite this text to be more concise.</textarea>
   <p>Use <span class="shortcut">Ctrl</span> + <span class="shortcut">Shift</span> + <span class="shortcut">O</span> to transform selected text using the prompt above.</p>

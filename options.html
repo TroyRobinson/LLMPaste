@@ -77,72 +77,42 @@
   <div class="form-group provider-field" data-provider="openrouter">
     <label for="openrouterApiKey">OpenRouter API Key:</label>
     <input type="password" id="openrouterApiKey" placeholder="Enter your OpenRouter API key">
-  </div>
-  
-  <div class="form-group provider-field" data-provider="openrouter">
-    <label for="openrouterModel">OpenRouter Model:</label>
-    <input type="text" id="openrouterModel" placeholder="anthropic/claude-3-5-sonnet">
-    <div style="font-size: 12px; color: #666; margin-top: 4px;">Examples: anthropic/claude-3-5-sonnet, openai/gpt-4o, meta-llama/llama-3-70b-instruct</div>
+    <div style="font-size: 12px; color: #666; margin-top: 4px;">Configure model names in the Quick Model Slots section below</div>
   </div>
   
   <!-- Cerebras -->
   <div class="form-group provider-field" data-provider="cerebras" style="display: none;">
     <label for="cerebrasApiKey">Cerebras API Key:</label>
     <input type="password" id="cerebrasApiKey" placeholder="Enter your Cerebras API key">
-  </div>
-  
-  <div class="form-group provider-field" data-provider="cerebras" style="display: none;">
-    <label for="cerebrasModel">Cerebras Model:</label>
-    <input type="text" id="cerebrasModel" placeholder="llama3.1-8b">
-    <div style="font-size: 12px; color: #666; margin-top: 4px;">Examples: llama3.1-8b, clownfish-19b</div>
+    <div style="font-size: 12px; color: #666; margin-top: 4px;">Configure model names in the Quick Model Slots section below</div>
   </div>
   
   <!-- Groq -->
   <div class="form-group provider-field" data-provider="groq" style="display: none;">
     <label for="groqApiKey">Groq API Key:</label>
     <input type="password" id="groqApiKey" placeholder="Enter your Groq API key">
-  </div>
-  
-  <div class="form-group provider-field" data-provider="groq" style="display: none;">
-    <label for="groqModel">Groq Model:</label>
-    <input type="text" id="groqModel" placeholder="llama-3.3-70b-versatile">
-    <div style="font-size: 12px; color: #666; margin-top: 4px;">Examples: llama-3.3-70b-versatile, mixtral-8x7b-32768, gemma-7b-it</div>
+    <div style="font-size: 12px; color: #666; margin-top: 4px;">Configure model names in the Quick Model Slots section below</div>
   </div>
   
   <!-- SambaNova -->
   <div class="form-group provider-field" data-provider="sambanova" style="display: none;">
     <label for="sambanovaApiKey">SambaNova API Key:</label>
     <input type="password" id="sambanovaApiKey" placeholder="Enter your SambaNova API key">
-  </div>
-  
-  <div class="form-group provider-field" data-provider="sambanova" style="display: none;">
-    <label for="sambanovaModel">SambaNova Model:</label>
-    <input type="text" id="sambanovaModel" placeholder="Llama-4-Maverick-17B-128E-Instruct">
-    <div style="font-size: 12px; color: #666; margin-top: 4px;">Example: Llama-4-Maverick-17B-128E-Instruct</div>
+    <div style="font-size: 12px; color: #666; margin-top: 4px;">Configure model names in the Quick Model Slots section below</div>
   </div>
   
   <!-- Kluster.ai -->
   <div class="form-group provider-field" data-provider="klusterai" style="display: none;">
     <label for="klusteraiApiKey">Kluster.ai API Key:</label>
     <input type="password" id="klusteraiApiKey" placeholder="Enter your Kluster.ai API key">
-  </div>
-  
-  <div class="form-group provider-field" data-provider="klusterai" style="display: none;">
-    <label for="klusteraiModel">Kluster.ai Model:</label>
-    <input type="text" id="klusteraiModel" placeholder="klusterai/Meta-Llama-3.1-8B-Instruct-Turbo">
-    <div style="font-size: 12px; color: #666; margin-top: 4px;">Example: klusterai/Meta-Llama-3.1-8B-Instruct-Turbo</div>
+    <div style="font-size: 12px; color: #666; margin-top: 4px;">Configure model names in the Quick Model Slots section below</div>
   </div>
   
   <!-- Lambda.ai -->
   <div class="form-group provider-field" data-provider="lambdaai" style="display: none;">
     <label for="lambdaaiApiKey">Lambda.ai API Key:</label>
     <input type="password" id="lambdaaiApiKey" placeholder="Enter your Lambda.ai API key">
-  </div>
-  
-  <div class="form-group provider-field" data-provider="lambdaai" style="display: none;">
-    <label for="lambdaaiModel">Lambda.ai Model:</label>
-    <input type="text" id="lambdaaiModel" placeholder="llama-4-maverick-17b-128e-instruct-fp8">
-    <div style="font-size: 12px; color: #666; margin-top: 4px;">Example: llama-4-maverick-17b-128e-instruct-fp8</div>
+    <div style="font-size: 12px; color: #666; margin-top: 4px;">Configure model names in the Quick Model Slots section below</div>
   </div>
   
   <div class="form-group">
@@ -160,8 +130,8 @@
     <textarea id="insertSystemPrompt" rows="4" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace;">Generate concise, ready-to-use code based on the prompt. Provide ONLY code without explanations, markdown formatting, or backticks. Do not add comments unless explicitly requested.</textarea>
   </div>
 
-  <h2 style="margin-top: 20px; font-size: 18px;">Quick Model Slots</h2>
-  <p style="margin-bottom: 15px; font-size: 14px; color: #666;">Configure up to 5 slots with different providers/models for quick switching in the popup.</p>
+  <h2 style="margin-top: 20px; font-size: 18px;">Model Slots</h2>
+  <p style="margin-bottom: 15px; font-size: 14px; color: #666;">Configure up to 5 model slots. Switch between them using keyboard shortcuts when transforming text.</p>
   
   <div class="form-group">
     <label for="modelSlot1">Slot 1 (Default - Enter):</label>
@@ -173,7 +143,7 @@
       <option value="klusterai">Kluster.ai</option>
       <option value="lambdaai">Lambda.ai</option>
     </select>
-    <input type="text" id="modelSlot1" placeholder="Model for slot 1" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+    <input type="text" id="modelSlot1" placeholder="e.g., anthropic/claude-3-5-sonnet" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
   </div>
   
   <div class="form-group">
@@ -186,7 +156,7 @@
       <option value="klusterai">Kluster.ai</option>
       <option value="lambdaai">Lambda.ai</option>
     </select>
-    <input type="text" id="modelSlot2" placeholder="Model for slot 2" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+    <input type="text" id="modelSlot2" placeholder="e.g., anthropic/claude-3-opus-20240229" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
   </div>
   
   <div class="form-group">
@@ -199,7 +169,7 @@
       <option value="klusterai">Kluster.ai</option>
       <option value="lambdaai">Lambda.ai</option>
     </select>
-    <input type="text" id="modelSlot3" placeholder="Model for slot 3" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+    <input type="text" id="modelSlot3" placeholder="e.g., openai/gpt-4o" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
   </div>
   
   <div class="form-group">
@@ -212,7 +182,7 @@
       <option value="klusterai">Kluster.ai</option>
       <option value="lambdaai">Lambda.ai</option>
     </select>
-    <input type="text" id="modelSlot4" placeholder="Model for slot 4" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+    <input type="text" id="modelSlot4" placeholder="e.g., llama-3.3-70b-versatile" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
   </div>
   
   <div class="form-group">
@@ -225,7 +195,12 @@
       <option value="klusterai">Kluster.ai</option>
       <option value="lambdaai">Lambda.ai</option>
     </select>
-    <input type="text" id="modelSlot5" placeholder="Model for slot 5" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+    <input type="text" id="modelSlot5" placeholder="e.g., meta-llama/llama-3-70b-instruct" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+  </div>
+  
+  <div style="margin-top: 15px; padding: 10px; background-color: #f5f5f5; border-radius: 4px; font-size: 13px; color: #666;">
+    <p style="margin: 0 0 5px 0; font-weight: bold;">Model Selection Shortcut Guide:</p>
+    <p style="margin: 0;">When transforming text with LLMPaste, press and hold the modifier key before pressing Enter to use that slot's model.</p>
   </div>
   
   <button id="saveBtn">Save Settings</button>
