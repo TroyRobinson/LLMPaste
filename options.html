@@ -146,6 +146,7 @@
     <input type="text" id="modelSlot1" placeholder="e.g., anthropic/claude-3-5-sonnet" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
   </div>
   
+  
   <div class="form-group">
     <label for="modelSlot2">Slot 2 (Shift+Enter):</label>
     <select id="modelSlot2Provider" style="width: 30%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;">
@@ -159,6 +160,7 @@
     <input type="text" id="modelSlot2" placeholder="e.g., anthropic/claude-3-opus-20240229" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
   </div>
   
+  
   <div class="form-group">
     <label for="modelSlot3">Slot 3 (Ctrl+Enter):</label>
     <select id="modelSlot3Provider" style="width: 30%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;">
@@ -170,6 +172,19 @@
       <option value="lambdaai">Lambda.ai</option>
     </select>
     <input type="text" id="modelSlot3" placeholder="e.g., openai/gpt-4o" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+  </div>
+  
+  <div class="form-group" style="background-color: #f8f8f8; padding: 15px; border-radius: 6px; border-left: 3px solid #4285f4; margin-bottom: 20px;">
+    <label for="modelSlot3Alt">Slot 3 Alternate (Fn+Ctrl+Enter):</label>
+    <select id="modelSlot3AltProvider" style="width: 30%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;">
+      <option value="openrouter">OpenRouter</option>
+      <option value="cerebras">Cerebras</option>
+      <option value="groq">Groq</option>
+      <option value="sambanova">SambaNova</option>
+      <option value="klusterai">Kluster.ai</option>
+      <option value="lambdaai">Lambda.ai</option>
+    </select>
+    <input type="text" id="modelSlot3Alt" placeholder="e.g., openai/gpt-4o" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
   </div>
   
   <div class="form-group">
@@ -185,8 +200,21 @@
     <input type="text" id="modelSlot4" placeholder="e.g., llama-3.3-70b-versatile" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
   </div>
   
+  <div class="form-group" style="background-color: #f8f8f8; padding: 15px; border-radius: 6px; border-left: 3px solid #4285f4; margin-bottom: 20px;">
+    <label for="modelSlot4Alt">Slot 4 Alternate (Fn+Alt+Enter):</label>
+    <select id="modelSlot4AltProvider" style="width: 30%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;">
+      <option value="openrouter">OpenRouter</option>
+      <option value="cerebras">Cerebras</option>
+      <option value="groq">Groq</option>
+      <option value="sambanova">SambaNova</option>
+      <option value="klusterai">Kluster.ai</option>
+      <option value="lambdaai">Lambda.ai</option>
+    </select>
+    <input type="text" id="modelSlot4Alt" placeholder="e.g., llama-3.3-70b-versatile" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+  </div>
+  
   <div class="form-group">
-    <label for="modelSlot5">Slot 5 (Command/Meta+Enter):</label>
+    <label for="modelSlot5">Slot 5 (Command/Win+Enter):</label>
     <select id="modelSlot5Provider" style="width: 30%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;">
       <option value="openrouter">OpenRouter</option>
       <option value="cerebras">Cerebras</option>
@@ -198,9 +226,31 @@
     <input type="text" id="modelSlot5" placeholder="e.g., meta-llama/llama-3-70b-instruct" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
   </div>
   
+  <div class="form-group" style="background-color: #f8f8f8; padding: 15px; border-radius: 6px; border-left: 3px solid #4285f4; margin-bottom: 20px;">
+    <label for="modelSlot5Alt">Slot 5 Alternate (Fn+Command/Win+Enter):</label>
+    <select id="modelSlot5AltProvider" style="width: 30%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;">
+      <option value="openrouter">OpenRouter</option>
+      <option value="cerebras">Cerebras</option>
+      <option value="groq">Groq</option>
+      <option value="sambanova">SambaNova</option>
+      <option value="klusterai">Kluster.ai</option>
+      <option value="lambdaai">Lambda.ai</option>
+    </select>
+    <input type="text" id="modelSlot5Alt" placeholder="e.g., anthropic/claude-3-haiku" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+    <div style="margin-top: 5px; font-size: 12px; color: #666;">Recommended: anthropic/claude-3-haiku (for fast responses)</div>
+  </div>
+  
   <div style="margin-top: 15px; padding: 10px; background-color: #f5f5f5; border-radius: 4px; font-size: 13px; color: #666;">
     <p style="margin: 0 0 5px 0; font-weight: bold;">Model Selection Shortcut Guide:</p>
-    <p style="margin: 0;">When transforming text with LLMPaste, press and hold the modifier key before pressing Enter to use that slot's model.</p>
+    <p style="margin: 0 0 5px 0;">When transforming text with LLMPaste, press and hold the modifier key before pressing Enter to use that slot's model:</p>
+    <ul style="margin: 5px 0 0 20px; padding: 0;">
+      <li>Enter: Slot 1 (default)</li>
+      <li>Shift+Enter: Slot 2</li>
+      <li>Ctrl+Enter: Slot 3</li>
+      <li>Option+Enter: Slot 4</li>
+      <li>Command+Enter: Slot 5 (Windows: Win+Enter)</li>
+    </ul>
+    <p style="margin: 8px 0 0 0;">For alternate models (slots 3-5 only), use: Shift+Ctrl+Enter (Slot 3 Alt), Shift+Option+Enter (Slot 4 Alt), Shift+Command+Enter (Slot 5 Alt), or the "ALT MODEL" button</p>
   </div>
   
   <button id="saveBtn">Save Settings</button>

@@ -183,12 +183,61 @@ function showFloatingEditor() {
   activeModelInfo.innerHTML = 'Active: <span id="activeModelName">Default model</span> <span id="activeModelSlot">(slot 1)</span>';
   modelInfoContainer.appendChild(activeModelInfo);
   
+  // Middle - Alt mode toggle
+  const altModeToggle = document.createElement('div');
+  altModeToggle.id = 'altModeToggle';
+  altModeToggle.style.marginLeft = '10px';
+  altModeToggle.style.padding = '2px 6px';
+  altModeToggle.style.borderRadius = '4px';
+  altModeToggle.style.backgroundColor = '#e0e0e0';
+  altModeToggle.style.color = '#666';
+  altModeToggle.style.cursor = 'pointer';
+  altModeToggle.style.fontSize = '11px';
+  altModeToggle.innerHTML = 'ALT MODEL <span style="font-size:9px">OFF</span>';
+  
+  // Add alt toggle behavior
+  let altModeActive = false;
+  altModeToggle.addEventListener('click', () => {
+    altModeActive = !altModeActive;
+    fnKeyActive = altModeActive; // Update the Fn key simulation
+    
+    // Update visual appearance
+    if (altModeActive) {
+      altModeToggle.style.backgroundColor = '#ff5722';
+      altModeToggle.style.color = 'white';
+      altModeToggle.innerHTML = 'ALT MODEL <span style="font-size:9px">ON</span>';
+      
+      // Update preview based on current modifier key (if any)
+      if (currentKeyModifier) {
+        const slotNum = currentKeyModifier === 'shift' ? 2 : 
+                      currentKeyModifier === 'ctrl' ? 3 :
+                      currentKeyModifier === 'alt' ? 4 : 
+                      currentKeyModifier === 'meta' ? 5 : 1;
+        updatePreviewDisplay(slotNum, true);
+      }
+    } else {
+      altModeToggle.style.backgroundColor = '#e0e0e0';
+      altModeToggle.style.color = '#666';
+      altModeToggle.innerHTML = 'ALT MODEL <span style="font-size:9px">OFF</span>';
+      
+      // Update preview based on current modifier key (if any)
+      if (currentKeyModifier) {
+        const slotNum = currentKeyModifier === 'shift' ? 2 : 
+                      currentKeyModifier === 'ctrl' ? 3 :
+                      currentKeyModifier === 'alt' ? 4 : 
+                      currentKeyModifier === 'meta' ? 5 : 1;
+        updatePreviewDisplay(slotNum, false);
+      }
+    }
+  });
+  modelInfoContainer.appendChild(altModeToggle);
+  
   // Right side - shortcuts info
   const shortcutsInfo = document.createElement('div');
   shortcutsInfo.style.color = '#4285f4';
   shortcutsInfo.style.cursor = 'pointer';
   shortcutsInfo.textContent = 'Model shortcuts';
-  shortcutsInfo.title = 'Shift+Enter: Slot 2, Ctrl+Enter: Slot 3, Alt+Enter: Slot 4, Cmd+Enter: Slot 5';
+  shortcutsInfo.title = 'Shift+Enter: Slot 2, Ctrl+Enter: Slot 3, Option+Enter: Slot 4, Cmd+Enter: Slot 5. Click ALT MODEL for alternate slots (3-5 only).';
   
   // Add tooltip behavior
   shortcutsInfo.addEventListener('click', () => {
@@ -198,8 +247,15 @@ function showFloatingEditor() {
         <div>Enter: Slot 1 (default)</div>
         <div>Shift+Enter: Slot 2</div>
         <div>Ctrl+Enter: Slot 3</div>
-        <div>Alt/Option+Enter: Slot 4</div>
-        <div>Command/Meta+Enter: Slot 5</div>
+        <div>Option+Enter: Slot 4</div>
+        <div>Command+Enter: Slot 5</div>
+        <div style="margin-top: 5px; margin-bottom: 3px;"><b>Alternate Models (slots 3-5 only):</b></div>
+        <div>Specific combinations for alternate slots:</div>
+        <div>- Shift+Ctrl+Enter: Slot 3 Alt</div>
+        <div>- Shift+Option+Enter: Slot 4 Alt</div>
+        <div>- Shift+Command+Enter: Slot 5 Alt</div>
+        <div style="margin-top: 3px;"><i>Alternative method:</i></div>
+        <div>Click ALT MODEL button, then use Ctrl/Option/Command+Enter</div>
       </div>
     `;
     
@@ -281,6 +337,7 @@ function showFloatingEditor() {
       if (!data.activeModelSlot) {
         chrome.storage.local.set({
           'activeModelSlot': 1,
+          'activeModelAlt': false,
           'activeModelName': defaultModel,
           'activeModelProvider': defaultProvider
         });
@@ -401,9 +458,9 @@ function showFloatingEditor() {
           // Model slots
           'modelSlot1Provider', 'modelSlot1Model',
           'modelSlot2Provider', 'modelSlot2Model',
-          'modelSlot3Provider', 'modelSlot3Model',
-          'modelSlot4Provider', 'modelSlot4Model',
-          'modelSlot5Provider', 'modelSlot5Model',
+          'modelSlot3Provider', 'modelSlot3Model', 'modelSlot3AltProvider', 'modelSlot3AltModel',
+          'modelSlot4Provider', 'modelSlot4Model', 'modelSlot4AltProvider', 'modelSlot4AltModel',
+          'modelSlot5Provider', 'modelSlot5Model', 'modelSlot5AltProvider', 'modelSlot5AltModel',
           // Prompts
           'systemPrompt', 
           'insertSystemPrompt'
@@ -414,34 +471,44 @@ function showFloatingEditor() {
           }
           try {
             // Check if there's an active model slot selected from the popup
-            chrome.storage.local.get(['activeModelSlot', 'activeModelProvider', 'activeModelName'], async (slotData) => {
+            chrome.storage.local.get(['activeModelSlot', 'activeModelAlt', 'activeModelProvider', 'activeModelName'], async (slotData) => {
               const activeSlot = slotData.activeModelSlot || 1;
-              debugLog('Using model slot:', activeSlot);
+              const useAlt = slotData.activeModelAlt || false;
+              debugLog('Using model slot:', activeSlot, useAlt ? '(alternate)' : '');
               
               // Get the provider and model from the active slot
               // First check if we have direct provider/model data from popup
               let slotProvider, slotModel;
+              const altSuffix = useAlt ? 'Alt' : '';
               
               if (slotData.activeModelProvider && slotData.activeModelName) {
                 debugLog('Using directly stored provider and model');
                 slotProvider = slotData.activeModelProvider;
                 
                 // If the model name doesn't have a prefix, we need to reconstruct it
-                if (slotData.activeModelName.includes('/')) {
+                debugLog(`Processing model name for slot ${activeSlot}${altSuffix}`);
+                debugLog(`Active model name: "${slotData.activeModelName}"`);
+                
+                if (slotData.activeModelName && slotData.activeModelName.includes('/')) {
                   slotModel = slotData.activeModelName;
+                  debugLog(`Using fully qualified model name: ${slotModel}`);
                 } else {
                   // Check if we have the full model name from storage
-                  slotModel = data[`modelSlot${activeSlot}Model`];
+                  const storageKey = `modelSlot${activeSlot}${altSuffix}Model`;
+                  debugLog(`Looking up model from storage with key: ${storageKey}`);
+                  slotModel = data[storageKey];
+                  debugLog(`Storage lookup result: ${slotModel || 'not found'}`);
                   
                   // If we can't find the full model, use the name as is
                   if (!slotModel) {
-                    slotModel = slotData.activeModelName;
+                    slotModel = slotData.activeModelName || '';
+                    debugLog(`Falling back to active model name: ${slotModel}`);
                   }
                 }
               } else {
                 // Fallback to getting from data using slot number
-                slotProvider = data[`modelSlot${activeSlot}Provider`];
-                slotModel = data[`modelSlot${activeSlot}Model`];
+                slotProvider = data[`modelSlot${activeSlot}${altSuffix}Provider`];
+                slotModel = data[`modelSlot${activeSlot}${altSuffix}Model`];
               }
               
               debugLog('Active model provider:', slotProvider);
@@ -517,7 +584,7 @@ function showFloatingEditor() {
               
               // Do NOT reset the active slot for storage - we just won't use it next time
               // Instead, we'll explicitly store slot 1 as the default for next time
-              if (activeSlot > 1) {
+              if (activeSlot > 1 || useAlt) {
                 // Get slot 1 provider and model for future use
                 const slot1Provider = data.modelSlot1Provider || 'openrouter';
                 const slot1Model = data.modelSlot1Model || 'anthropic/claude-3-5-sonnet';
@@ -525,6 +592,7 @@ function showFloatingEditor() {
                 // Store slot 1 as the active slot for next time
                 chrome.storage.local.set({
                   'activeModelSlot': 1,
+                  'activeModelAlt': false,
                   'activeModelName': slot1Model,
                   'activeModelProvider': slot1Provider
                 });
@@ -591,22 +659,30 @@ function showFloatingEditor() {
   let currentKeyModifier = null;
   
   // Update model slot display based on key presses
-  function updateModelSlotDisplay(slotNum) {
+  function updateModelSlotDisplay(slotNum, useAlt = false) {
     const modelNameEl = document.getElementById('activeModelName');
     const modelSlotEl = document.getElementById('activeModelSlot');
     
     if (!modelNameEl || !modelSlotEl) return;
     
     // First update the slot number visually
-    modelSlotEl.textContent = `(slot ${slotNum})`;
+    modelSlotEl.textContent = useAlt ? `(slot ${slotNum} alt)` : `(slot ${slotNum})`;
     
     // Then load the model data for that slot
-    chrome.storage.sync.get([
-      `modelSlot${slotNum}Provider`,
-      `modelSlot${slotNum}Model`
-    ], (data) => {
-      const provider = data[`modelSlot${slotNum}Provider`] || 'openrouter';
-      const model = data[`modelSlot${slotNum}Model`] || 'Default model';
+    const altSuffix = useAlt ? 'Alt' : '';
+    const providerKey = `modelSlot${slotNum}${altSuffix}Provider`;
+    const modelKey = `modelSlot${slotNum}${altSuffix}Model`;
+    
+    debugLog(`Updating model slot display for slot ${slotNum}${useAlt ? ' alt' : ''}`);
+    debugLog(`Looking up storage keys: ${providerKey}, ${modelKey}`);
+    
+    chrome.storage.sync.get([providerKey, modelKey], (data) => {
+      debugLog(`Storage data for slot ${slotNum}${useAlt ? ' alt' : ''}:`, data);
+      
+      const provider = data[providerKey] || 'openrouter';
+      const model = data[modelKey] || 'Default model';
+      
+      debugLog(`Provider: ${provider}, Model: ${model}`);
       
       // Format display name
       let displayName = model;
@@ -617,22 +693,101 @@ function showFloatingEditor() {
       modelNameEl.textContent = `${displayName} (${provider})`;
       
       // Update storage for content script to use
-      chrome.storage.local.set({
+      const storageData = {
         'activeModelSlot': slotNum,
+        'activeModelAlt': useAlt,
         'activeModelName': model,
         'activeModelProvider': provider
-      });
+      };
       
-      debugLog(`Updated model slot to ${slotNum}: ${model} (${provider})`);
+      debugLog(`Updating local storage with:`, storageData);
+      
+      chrome.storage.local.set(storageData, () => {
+        if (chrome.runtime.lastError) {
+          debugLog(`Error setting local storage: ${chrome.runtime.lastError.message}`);
+        } else {
+          debugLog(`Successfully updated model slot to ${slotNum}${useAlt ? ' alt' : ''}: ${model} (${provider})`);
+        }
+      });
     });
   }
+  
+  // Track the Fn key status (since there's no direct event for it)
+  let fnKeyActive = false;
+  
+  // Special helper function to check for the Fn key
+  // We'll use a workaround by checking for function keys like F1-F12
+  document.addEventListener('keydown', (e) => {
+    // If any function key is pressed, we'll assume Fn is active
+    if (e.key && e.key.match(/^F[1-9][0-9]?$/)) {
+      fnKeyActive = true;
+      setTimeout(() => { fnKeyActive = false; }, 1000); // Reset after 1 second
+    }
+  });
   
   // Handle keydown events for modifier keys and Enter
   textarea.addEventListener('keydown', (e) => {
     // Handle Enter key for submission with modifiers
     if (e.key === 'Enter') {
+      // Count active modifier keys for dual-key alt mode detection
+      const modifierCount = (e.shiftKey ? 1 : 0) + (e.ctrlKey ? 1 : 0) + 
+                           (e.altKey ? 1 : 0) + (e.metaKey ? 1 : 0);
+      
+      // Specific key combinations for alt slots
+      // Only use specific combinations to avoid confusion
+      if (modifierCount >= 2) {
+        e.preventDefault();
+        
+        // Only specific combinations work for alt models
+        if (e.shiftKey && e.ctrlKey && !e.altKey && !e.metaKey) {
+          // Shift+Ctrl+Enter = Slot 3 Alt
+          updateModelSlotDisplay(3, true);
+          currentKeyModifier = 'shift+ctrl';
+          replaceButton.click();
+          return;
+        } else if (e.shiftKey && e.altKey && !e.ctrlKey && !e.metaKey) {
+          // Shift+Option/Alt+Enter = Slot 4 Alt
+          updateModelSlotDisplay(4, true);
+          currentKeyModifier = 'shift+alt';
+          replaceButton.click();
+          return;
+        } else if (e.shiftKey && e.metaKey && !e.ctrlKey && !e.altKey) {
+          // Shift+Command/Meta+Enter = Slot 5 Alt
+          updateModelSlotDisplay(5, true);
+          currentKeyModifier = 'shift+meta';
+          replaceButton.click();
+          return;
+        }
+        
+        // Fall through to regular single-modifier handling if not a designated combo
+      }
+      
+      // Use alternate models if ALT mode is active
+      // No alt mode for slots 1 and 2 anymore
+      // Ctrl+Enter in ALT mode = Slot 3 Alt
+      else if (e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && altModeActive) {
+        e.preventDefault();
+        updateModelSlotDisplay(3, true);
+        currentKeyModifier = 'alt+ctrl';
+        replaceButton.click();
+      }
+      // Alt+Enter in ALT mode = Slot 4 Alt
+      else if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey && altModeActive) {
+        e.preventDefault();
+        updateModelSlotDisplay(4, true);
+        currentKeyModifier = 'alt+alt';
+        replaceButton.click();
+      }
+      // Meta/Cmd+Enter in ALT mode = Slot 5 Alt
+      else if (e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && altModeActive) {
+        e.preventDefault();
+        debugLog('Command+Enter in ALT mode - activating Slot 5 Alt');
+        updateModelSlotDisplay(5, true);
+        currentKeyModifier = 'alt+meta';
+        replaceButton.click();
+      }
       // With shift modifier = Slot 2
-      if (e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      else if (e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
         e.preventDefault();
         updateModelSlotDisplay(2);
         currentKeyModifier = 'shift';
@@ -672,70 +827,112 @@ function showFloatingEditor() {
     }
     // For just holding modifier keys (preview without Enter)
     else {
-      // Just Shift = preview Slot 2
-      if (e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && currentKeyModifier !== 'shift') {
-        currentKeyModifier = 'shift';
+      // Function to update the preview model display
+      const updatePreviewDisplay = (slotNum, useAlt = false) => {
         const modelNameEl = document.getElementById('activeModelName');
         const modelSlotEl = document.getElementById('activeModelSlot');
-        if (modelNameEl) modelNameEl.style.color = '#4285f4'; // Highlight in blue
-        if (modelSlotEl) modelSlotEl.textContent = '(slot 2)';
+        const altSuffix = useAlt ? 'Alt' : '';
         
-        // Fetch model info for slot 2
-        chrome.storage.sync.get(['modelSlot2Provider', 'modelSlot2Model'], (data) => {
-          if (modelNameEl && data.modelSlot2Model) {
-            const displayName = data.modelSlot2Model.includes('/') ? 
-              data.modelSlot2Model.split('/')[1] : data.modelSlot2Model;
-            modelNameEl.textContent = `${displayName} (${data.modelSlot2Provider || 'openrouter'})`;
+        if (modelNameEl) {
+          modelNameEl.style.color = useAlt ? '#ff5722' : '#4285f4'; // Orange for alt, blue for regular
+        }
+        
+        if (modelSlotEl) {
+          modelSlotEl.textContent = useAlt ? `(slot ${slotNum} alt)` : `(slot ${slotNum})`;
+        }
+        
+        // Debug log to help diagnose issues
+        debugLog(`Getting model for slot ${slotNum}${altSuffix}`);
+        
+        chrome.storage.sync.get([`modelSlot${slotNum}${altSuffix}Provider`, `modelSlot${slotNum}${altSuffix}Model`], (data) => {
+          // Debug log data for easier diagnosis
+          debugLog(`Model slot ${slotNum}${altSuffix} data:`, data);
+          
+          if (modelNameEl) {
+            // If we have model data, use it; otherwise show a placeholder
+            const modelData = data[`modelSlot${slotNum}${altSuffix}Model`];
+            const providerData = data[`modelSlot${slotNum}${altSuffix}Provider`];
+            
+            if (modelData) {
+              const displayName = modelData.includes('/') ? modelData.split('/')[1] : modelData;
+              modelNameEl.textContent = `${displayName} (${providerData || 'openrouter'})`;
+            } else {
+              modelNameEl.textContent = `Not configured (slot ${slotNum}${useAlt ? ' alt' : ''})`;
+            }
           }
         });
+      };
+      
+      // Check if multiple modifier keys are pressed for alt model previews
+      const modifierCount = (e.shiftKey ? 1 : 0) + (e.ctrlKey ? 1 : 0) + 
+                           (e.altKey ? 1 : 0) + (e.metaKey ? 1 : 0);
+      
+      if (modifierCount >= 2) {
+        // Only specific combinations work for alt models
+        // Use the same logic for preview as for actual execution
+        if (e.shiftKey && e.ctrlKey && !e.altKey && !e.metaKey) {
+          // Shift+Ctrl = Slot 3 Alt
+          if (currentKeyModifier !== 'shift+ctrl') {
+            currentKeyModifier = 'shift+ctrl';
+            updatePreviewDisplay(3, true);
+          }
+          return;
+        } else if (e.shiftKey && e.altKey && !e.ctrlKey && !e.metaKey) {
+          // Shift+Option/Alt = Slot 4 Alt
+          if (currentKeyModifier !== 'shift+alt') {
+            currentKeyModifier = 'shift+alt';
+            updatePreviewDisplay(4, true);
+          }
+          return;
+        } else if (e.shiftKey && e.metaKey && !e.ctrlKey && !e.altKey) {
+          // Shift+Command/Meta = Slot 5 Alt
+          if (currentKeyModifier !== 'shift+meta') {
+            currentKeyModifier = 'shift+meta';
+            updatePreviewDisplay(5, true);
+          }
+          return;
+        }
+        
+        // Not a recognized combo, so don't show alt preview
+        return;
+      }
+      
+      // No alt mode preview for slots 1 and 2 anymore
+      // In ALT mode with Ctrl = preview Slot 3 Alt
+      else if (altModeActive && e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && currentKeyModifier !== 'alt+ctrl') {
+        currentKeyModifier = 'alt+ctrl';
+        updatePreviewDisplay(3, true);
+      }
+      // In ALT mode with Alt key = preview Slot 4 Alt
+      else if (altModeActive && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey && currentKeyModifier !== 'alt+alt') {
+        currentKeyModifier = 'alt+alt';
+        updatePreviewDisplay(4, true);
+      }
+      // In ALT mode with Meta/Cmd = preview Slot 5 Alt
+      else if (altModeActive && e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && currentKeyModifier !== 'alt+meta') {
+        currentKeyModifier = 'alt+meta';
+        updatePreviewDisplay(5, true);
+      }
+      // Just Shift = preview Slot 2
+      else if (e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && !fnKeyActive && currentKeyModifier !== 'shift') {
+        currentKeyModifier = 'shift';
+        updatePreviewDisplay(2);
       }
       // Just Ctrl = preview Slot 3
-      else if (e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && currentKeyModifier !== 'ctrl') {
+      else if (e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && !fnKeyActive && currentKeyModifier !== 'ctrl') {
         currentKeyModifier = 'ctrl';
-        const modelNameEl = document.getElementById('activeModelName');
-        const modelSlotEl = document.getElementById('activeModelSlot');
-        if (modelNameEl) modelNameEl.style.color = '#4285f4';
-        if (modelSlotEl) modelSlotEl.textContent = '(slot 3)';
-        
-        chrome.storage.sync.get(['modelSlot3Provider', 'modelSlot3Model'], (data) => {
-          if (modelNameEl && data.modelSlot3Model) {
-            const displayName = data.modelSlot3Model.includes('/') ? 
-              data.modelSlot3Model.split('/')[1] : data.modelSlot3Model;
-            modelNameEl.textContent = `${displayName} (${data.modelSlot3Provider || 'openrouter'})`;
-          }
-        });
+        updatePreviewDisplay(3);
       }
       // Just Alt = preview Slot 4
-      else if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey && currentKeyModifier !== 'alt') {
+      else if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey && !fnKeyActive && currentKeyModifier !== 'alt') {
         currentKeyModifier = 'alt';
-        const modelNameEl = document.getElementById('activeModelName');
-        const modelSlotEl = document.getElementById('activeModelSlot');
-        if (modelNameEl) modelNameEl.style.color = '#4285f4';
-        if (modelSlotEl) modelSlotEl.textContent = '(slot 4)';
-        
-        chrome.storage.sync.get(['modelSlot4Provider', 'modelSlot4Model'], (data) => {
-          if (modelNameEl && data.modelSlot4Model) {
-            const displayName = data.modelSlot4Model.includes('/') ? 
-              data.modelSlot4Model.split('/')[1] : data.modelSlot4Model;
-            modelNameEl.textContent = `${displayName} (${data.modelSlot4Provider || 'openrouter'})`;
-          }
-        });
+        updatePreviewDisplay(4);
       }
       // Just Meta/Cmd = preview Slot 5
-      else if (e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && currentKeyModifier !== 'meta') {
+      else if (e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && !fnKeyActive && currentKeyModifier !== 'meta') {
         currentKeyModifier = 'meta';
-        const modelNameEl = document.getElementById('activeModelName');
-        const modelSlotEl = document.getElementById('activeModelSlot');
-        if (modelNameEl) modelNameEl.style.color = '#4285f4';
-        if (modelSlotEl) modelSlotEl.textContent = '(slot 5)';
-        
-        chrome.storage.sync.get(['modelSlot5Provider', 'modelSlot5Model'], (data) => {
-          if (modelNameEl && data.modelSlot5Model) {
-            const displayName = data.modelSlot5Model.includes('/') ? 
-              data.modelSlot5Model.split('/')[1] : data.modelSlot5Model;
-            modelNameEl.textContent = `${displayName} (${data.modelSlot5Provider || 'openrouter'})`;
-          }
-        });
+        debugLog('Meta/Command key pressed - previewing Slot 5');
+        updatePreviewDisplay(5);
       }
     }
   });
@@ -744,6 +941,77 @@ function showFloatingEditor() {
   textarea.addEventListener('keyup', (e) => {
     // Skip handling if Enter key (that's for submission)
     if (e.key === 'Enter') return;
+    
+    // Handle shift key being released specifically (for alt models)
+    if (!e.shiftKey && (currentKeyModifier === 'shift+ctrl' || 
+                        currentKeyModifier === 'shift+alt' || 
+                        currentKeyModifier === 'shift+meta')) {
+      // Determine which other key is still pressed
+      let slotNum = 1;
+      if (e.ctrlKey) slotNum = 3;
+      else if (e.altKey) slotNum = 4;
+      else if (e.metaKey) slotNum = 5;
+      
+      // Update to regular slot model
+      currentKeyModifier = slotNum === 3 ? 'ctrl' : 
+                          slotNum === 4 ? 'alt' : 
+                          slotNum === 5 ? 'meta' : null;
+      
+      if (currentKeyModifier) {
+        // Show regular slot
+        const modelNameEl = document.getElementById('activeModelName');
+        const modelSlotEl = document.getElementById('activeModelSlot');
+        
+        if (modelNameEl) modelNameEl.style.color = '#4285f4'; // Regular blue color
+        if (modelSlotEl) modelSlotEl.textContent = `(slot ${slotNum})`;
+        
+        // Fetch model info for the regular slot
+        chrome.storage.sync.get([`modelSlot${slotNum}Provider`, `modelSlot${slotNum}Model`], (data) => {
+          if (modelNameEl && data[`modelSlot${slotNum}Model`]) {
+            const displayName = data[`modelSlot${slotNum}Model`].includes('/') ? 
+              data[`modelSlot${slotNum}Model`].split('/')[1] : data[`modelSlot${slotNum}Model`];
+            modelNameEl.textContent = `${displayName} (${data[`modelSlot${slotNum}Provider`] || 'openrouter'})`;
+          }
+        });
+      } else {
+        // Reset if no other keys pressed
+        const modelNameEl = document.getElementById('activeModelName');
+        const modelSlotEl = document.getElementById('activeModelSlot');
+        
+        if (modelNameEl) {
+          modelNameEl.style.color = ''; // Reset color
+          
+          // Re-fetch the default model info
+          chrome.storage.local.get(['activeModelSlot', 'activeModelName', 'activeModelProvider'], (data) => {
+            // If we have previously selected something, show that
+            if (data.activeModelName) {
+              let displayName = data.activeModelName;
+              if (displayName.includes('/')) {
+                displayName = displayName.split('/')[1];
+              }
+              modelNameEl.textContent = `${displayName} (${data.activeModelProvider || 'default'})`;
+            } else {
+              // Otherwise load slot 1 details
+              chrome.storage.sync.get(['modelSlot1Provider', 'modelSlot1Model'], (slotData) => {
+                if (slotData.modelSlot1Model) {
+                  const displayName = slotData.modelSlot1Model.includes('/') ? 
+                    slotData.modelSlot1Model.split('/')[1] : slotData.modelSlot1Model;
+                  modelNameEl.textContent = `${displayName} (${slotData.modelSlot1Provider || 'openrouter'})`;
+                }
+              });
+            }
+          });
+        }
+        
+        // Reset slot display
+        if (modelSlotEl) {
+          chrome.storage.local.get('activeModelSlot', (data) => {
+            modelSlotEl.textContent = `(slot ${data.activeModelSlot || 1})`;
+          });
+        }
+      }
+      return;
+    }
     
     // If all modifiers are released, reset display
     if (!e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && currentKeyModifier) {
