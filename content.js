@@ -582,6 +582,11 @@ function showFloatingEditor() {
               
               debugLog(`Using provider: ${provider}, model: ${model}, slot: ${activeSlot}`);
               
+              // Update loading notification to include model name
+              if (window.currentLLMPasteLoadingNotification) {
+                window.currentLLMPasteLoadingNotification.textContent = `${actionText} with model ${model}...`;
+              }
+              
               // Do NOT reset the active slot for storage - we just won't use it next time
               // Instead, we'll explicitly store slot 1 as the default for next time
               if (activeSlot > 1 || useAlt) {
