@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LLMPaste",
-  "description": "Transform selected text using AI with OpenRouter",
+  "description": "Transform selected text using AI with OpenRouter or Cerebras",
   "version": "1.0",
   "permissions": [
     "activeTab",
@@ -11,7 +11,14 @@
     "clipboardRead",
     "clipboardWrite"
   ],
-  "host_permissions": ["https://openrouter.ai/*"],
+  "host_permissions": [
+    "https://openrouter.ai/*", 
+    "https://api.cerebras.ai/*",
+    "https://api.groq.com/*",
+    "https://api.sambanova.ai/*",
+    "https://api.kluster.ai/*",
+    "https://api.lambda.ai/*"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

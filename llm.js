@@ -2,25 +2,25 @@
  * llm.js
  *
  * This module is the SINGLE SOURCE OF TRUTH for all LLM API calls in the LLMPaste extension.
- * Any logic for interacting with LLM providers (OpenRouter or others) must be implemented here.
+ * Any logic for interacting with LLM providers (OpenRouter, Cerebras, Groq, etc.) must be implemented here.
  * Do NOT call LLM APIs directly from content scripts, background scripts, popups, or options.
  *
  * Usage: import { callLLM } from './llm.js';
  */
-// llm.js - Abstraction for LLM API interactions (OpenRouter, future providers)
 
 /**
- * Call an LLM provider (currently OpenRouter) to generate text.
+ * Call an LLM provider to generate text.
  * @param {Object} options
  * @param {string} options.promptText - The user prompt.
  * @param {string} [options.selectedText] - The selected text to transform (optional).
- * @param {string} options.apiKey - The API key for OpenRouter.
+ * @param {string} options.apiKey - The API key for the provider.
  * @param {string} options.model - The LLM model to use.
+ * @param {string} options.provider - The LLM provider to use (openrouter, cerebras, groq, sambanova, klusterai, lambdaai).
  * @param {string} [options.systemPrompt] - Optional system prompt.
  * @returns {Promise<string>} The generated text from the LLM.
  */
-export async function callLLM({ promptText, selectedText, apiKey, model, systemPrompt }) {
-  // Compose messages array as required by OpenRouter API
+export async function callLLM({ promptText, selectedText, apiKey, model, provider, systemPrompt }) {
+  // Compose messages array as required by API
   let messages = [];
 
   if (systemPrompt) {
@@ -42,21 +42,97 @@ export async function callLLM({ promptText, selectedText, apiKey, model, systemP
     });
   }
 
-  // Always use the full context regardless of model
-  
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  let apiEndpoint, headers, requestBody;
+
+  switch (provider) {
+    case 'cerebras':
+      apiEndpoint = 'https://api.cerebras.ai/v1/chat/completions';
+      headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      };
+      requestBody = {
+        model: model,
+        messages: messages,
+        stream: false,
+        temperature: 0.7,
+        max_completion_tokens: 10000,
+        top_p: 1
+      };
+      break;
+    
+    case 'groq':
+      apiEndpoint = 'https://api.groq.com/openai/v1/chat/completions';
+      headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      };
+      requestBody = {
+        model: model,
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 10000
+      };
+      break;
+    
+    case 'sambanova':
+      apiEndpoint = 'https://api.sambanova.ai/v1/chat/completions';
+      headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      };
+      requestBody = {
+        model: model,
+        messages: messages,
+        stream: false
+      };
+      break;
+    
+    case 'klusterai':
+      apiEndpoint = 'https://api.kluster.ai/v1/chat/completions';
+      headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      };
+      requestBody = {
+        model: model,
+        messages: messages
+      };
+      break;
+    
+    case 'lambdaai':
+      apiEndpoint = 'https://api.lambda.ai/v1/chat/completions';
+      headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      };
+      requestBody = {
+        model: model,
+        messages: messages
+      };
+      break;
+    
+    case 'openrouter':
+    default:
+      apiEndpoint = 'https://openrouter.ai/api/v1/chat/completions';
+      headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://github.com/llmpaste',
+        'X-Title': 'LLMPaste'
+      };
+      requestBody = {
+        model: model,
+        messages: messages,
+        max_tokens: 10000
+      };
+      break;
+  }
+
+  const response = await fetch(apiEndpoint, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'https://github.com/llmpaste',
-      'X-Title': 'LLMPaste'
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: messages,
-      max_tokens: 10000
-    })
+    headers: headers,
+    body: JSON.stringify(requestBody)
   });
 
   if (!response.ok) {
@@ -68,6 +144,6 @@ export async function callLLM({ promptText, selectedText, apiKey, model, systemP
   if (data.choices && data.choices.length > 0 && data.choices[0].message) {
     return data.choices[0].message.content.trim();
   } else {
-    throw new Error('Invalid response format from OpenRouter API');
+    throw new Error(`Invalid response format from ${provider} API`);
   }
 }

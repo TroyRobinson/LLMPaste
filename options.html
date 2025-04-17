@@ -62,14 +62,87 @@
   </div>
   
   <div class="form-group">
+    <label for="llmProvider">LLM Provider:</label>
+    <select id="llmProvider" style="width: 100%; padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;">
+      <option value="openrouter">OpenRouter</option>
+      <option value="cerebras">Cerebras</option>
+      <option value="groq">Groq</option>
+      <option value="sambanova">SambaNova</option>
+      <option value="klusterai">Kluster.ai</option>
+      <option value="lambdaai">Lambda.ai</option>
+    </select>
+  </div>
+  
+  <!-- OpenRouter -->
+  <div class="form-group provider-field" data-provider="openrouter">
     <label for="openrouterApiKey">OpenRouter API Key:</label>
     <input type="password" id="openrouterApiKey" placeholder="Enter your OpenRouter API key">
   </div>
   
-  <div class="form-group">
-    <label for="llmModel">LLM Model:</label>
-    <input type="text" id="llmModel" placeholder="anthropic/claude-3-5-sonnet">
+  <div class="form-group provider-field" data-provider="openrouter">
+    <label for="openrouterModel">OpenRouter Model:</label>
+    <input type="text" id="openrouterModel" placeholder="anthropic/claude-3-5-sonnet">
     <div style="font-size: 12px; color: #666; margin-top: 4px;">Examples: anthropic/claude-3-5-sonnet, openai/gpt-4o, meta-llama/llama-3-70b-instruct</div>
+  </div>
+  
+  <!-- Cerebras -->
+  <div class="form-group provider-field" data-provider="cerebras" style="display: none;">
+    <label for="cerebrasApiKey">Cerebras API Key:</label>
+    <input type="password" id="cerebrasApiKey" placeholder="Enter your Cerebras API key">
+  </div>
+  
+  <div class="form-group provider-field" data-provider="cerebras" style="display: none;">
+    <label for="cerebrasModel">Cerebras Model:</label>
+    <input type="text" id="cerebrasModel" placeholder="llama3.1-8b">
+    <div style="font-size: 12px; color: #666; margin-top: 4px;">Examples: llama3.1-8b, clownfish-19b</div>
+  </div>
+  
+  <!-- Groq -->
+  <div class="form-group provider-field" data-provider="groq" style="display: none;">
+    <label for="groqApiKey">Groq API Key:</label>
+    <input type="password" id="groqApiKey" placeholder="Enter your Groq API key">
+  </div>
+  
+  <div class="form-group provider-field" data-provider="groq" style="display: none;">
+    <label for="groqModel">Groq Model:</label>
+    <input type="text" id="groqModel" placeholder="llama-3.3-70b-versatile">
+    <div style="font-size: 12px; color: #666; margin-top: 4px;">Examples: llama-3.3-70b-versatile, mixtral-8x7b-32768, gemma-7b-it</div>
+  </div>
+  
+  <!-- SambaNova -->
+  <div class="form-group provider-field" data-provider="sambanova" style="display: none;">
+    <label for="sambanovaApiKey">SambaNova API Key:</label>
+    <input type="password" id="sambanovaApiKey" placeholder="Enter your SambaNova API key">
+  </div>
+  
+  <div class="form-group provider-field" data-provider="sambanova" style="display: none;">
+    <label for="sambanovaModel">SambaNova Model:</label>
+    <input type="text" id="sambanovaModel" placeholder="Llama-4-Maverick-17B-128E-Instruct">
+    <div style="font-size: 12px; color: #666; margin-top: 4px;">Example: Llama-4-Maverick-17B-128E-Instruct</div>
+  </div>
+  
+  <!-- Kluster.ai -->
+  <div class="form-group provider-field" data-provider="klusterai" style="display: none;">
+    <label for="klusteraiApiKey">Kluster.ai API Key:</label>
+    <input type="password" id="klusteraiApiKey" placeholder="Enter your Kluster.ai API key">
+  </div>
+  
+  <div class="form-group provider-field" data-provider="klusterai" style="display: none;">
+    <label for="klusteraiModel">Kluster.ai Model:</label>
+    <input type="text" id="klusteraiModel" placeholder="klusterai/Meta-Llama-3.1-8B-Instruct-Turbo">
+    <div style="font-size: 12px; color: #666; margin-top: 4px;">Example: klusterai/Meta-Llama-3.1-8B-Instruct-Turbo</div>
+  </div>
+  
+  <!-- Lambda.ai -->
+  <div class="form-group provider-field" data-provider="lambdaai" style="display: none;">
+    <label for="lambdaaiApiKey">Lambda.ai API Key:</label>
+    <input type="password" id="lambdaaiApiKey" placeholder="Enter your Lambda.ai API key">
+  </div>
+  
+  <div class="form-group provider-field" data-provider="lambdaai" style="display: none;">
+    <label for="lambdaaiModel">Lambda.ai Model:</label>
+    <input type="text" id="lambdaaiModel" placeholder="llama-4-maverick-17b-128e-instruct-fp8">
+    <div style="font-size: 12px; color: #666; margin-top: 4px;">Example: llama-4-maverick-17b-128e-instruct-fp8</div>
   </div>
   
   <div class="form-group">

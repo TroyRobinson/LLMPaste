@@ -22,10 +22,9 @@ let llmReady = (async () => {
 // (See below for replacement of all callOpenRouter usages)
 
 // Function to show a temporary notification
-function showNotification(message) {
+function showNotification(message, isLoading = false) {
   // Create notification element
   const notification = document.createElement('div');
-  notification.textContent = message;
   notification.style.position = 'fixed';
   notification.style.bottom = '20px';
   notification.style.right = '20px';
@@ -36,16 +35,66 @@ function showNotification(message) {
   notification.style.zIndex = '9999999';
   notification.style.fontSize = '14px';
   notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+  notification.style.display = 'flex';
+  notification.style.alignItems = 'center';
+  notification.style.gap = '10px';
+  
+  // Add spinner if loading
+  if (isLoading) {
+    const spinner = document.createElement('div');
+    spinner.className = 'llmpaste-spinner';
+    spinner.style.width = '16px';
+    spinner.style.height = '16px';
+    spinner.style.border = '3px solid rgba(255,255,255,0.3)';
+    spinner.style.borderRadius = '50%';
+    spinner.style.borderTopColor = 'white';
+    spinner.style.animation = 'llmpasteSpinner 1s linear infinite';
+    notification.appendChild(spinner);
+    
+    // Add the animation if it doesn't exist yet
+    if (!document.getElementById('llmpaste-spinner-style')) {
+      const style = document.createElement('style');
+      style.id = 'llmpaste-spinner-style';
+      style.textContent = `
+        @keyframes llmpasteSpinner {
+          to { transform: rotate(360deg); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+  
+  // Add message
+  const messageEl = document.createElement('span');
+  messageEl.textContent = message;
+  notification.appendChild(messageEl);
+  
+  // Store reference to remove it later if needed
+  if (isLoading) {
+    window.currentLLMPasteLoadingNotification = notification;
+  }
   
   // Add to document
   document.body.appendChild(notification);
   
-  // Remove after delay
-  setTimeout(() => {
-    notification.style.opacity = '0';
-    notification.style.transition = 'opacity 0.5s';
-    setTimeout(() => notification.remove(), 500);
-  }, 3000);
+  // Remove after delay (only for non-loading notifications)
+  if (!isLoading) {
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      notification.style.transition = 'opacity 0.5s';
+      setTimeout(() => notification.remove(), 500);
+    }, 3000);
+  }
+  
+  return notification;
+}
+
+// Function to clear loading notification
+function clearLoadingNotification() {
+  if (window.currentLLMPasteLoadingNotification) {
+    window.currentLLMPasteLoadingNotification.remove();
+    window.currentLLMPasteLoadingNotification = null;
+  }
 }
 
 // Floating editor instance reference
@@ -210,46 +259,131 @@ function showFloatingEditor() {
     // Get the selected text (may be empty for insertion)
     const selectedText = lastSelectedText;
     
-    // Modify notification text based on whether we're replacing or inserting
+    // Show loading spinner while waiting for LLM response
     const actionText = selectedText ? 'Transforming selected text' : 'Creating text for insertion';
-    showNotification(`${actionText} with LLM...`);
+    showNotification(`${actionText} with LLM...`, true);
     
-    // Get API key, model, and appropriate system prompt from storage
+    // Get provider, API key, model, and appropriate system prompt from storage
     try {
       if (chrome && chrome.storage && chrome.storage.sync) {
-        chrome.storage.sync.get(['openrouterApiKey', 'llmModel', 'systemPrompt', 'insertSystemPrompt'], async (data) => {
+        chrome.storage.sync.get([
+          'llmProvider',
+          // API Keys
+          'openrouterApiKey', 
+          'cerebrasApiKey',
+          'groqApiKey',
+          'sambanovaApiKey',
+          'klusteraiApiKey',
+          'lambdaaiApiKey',
+          // Models
+          'openrouterModel', 
+          'cerebrasModel',
+          'groqModel',
+          'sambanovaModel',
+          'klusteraiModel',
+          'lambdaaiModel',
+          // Prompts
+          'systemPrompt', 
+          'insertSystemPrompt'
+        ], async (data) => {
           if (chrome.runtime.lastError) {
             showNotification('Error accessing Chrome storage: ' + chrome.runtime.lastError.message);
             return;
           }
           try {
-            const apiKey = data.openrouterApiKey;
-            const model = data.llmModel || 'anthropic/claude-3-5-sonnet';
+            // Determine which provider to use
+            const provider = data.llmProvider || 'openrouter';
+            
+            // Get the appropriate API key and model based on provider
+            let apiKey, model;
+            
+            switch (provider) {
+              case 'cerebras':
+                apiKey = data.cerebrasApiKey;
+                model = data.cerebrasModel || 'llama3.1-8b';
+                if (!apiKey) {
+                  showNotification('Error: Cerebras API key not set. Please set it in options.');
+                  return;
+                }
+                break;
+              
+              case 'groq':
+                apiKey = data.groqApiKey;
+                model = data.groqModel || 'llama-3.3-70b-versatile';
+                if (!apiKey) {
+                  showNotification('Error: Groq API key not set. Please set it in options.');
+                  return;
+                }
+                break;
+              
+              case 'sambanova':
+                apiKey = data.sambanovaApiKey;
+                model = data.sambanovaModel || 'Llama-4-Maverick-17B-128E-Instruct';
+                if (!apiKey) {
+                  showNotification('Error: SambaNova API key not set. Please set it in options.');
+                  return;
+                }
+                break;
+              
+              case 'klusterai':
+                apiKey = data.klusteraiApiKey;
+                model = data.klusteraiModel || 'klusterai/Meta-Llama-3.1-8B-Instruct-Turbo';
+                if (!apiKey) {
+                  showNotification('Error: Kluster.ai API key not set. Please set it in options.');
+                  return;
+                }
+                break;
+              
+              case 'lambdaai':
+                apiKey = data.lambdaaiApiKey;
+                model = data.lambdaaiModel || 'llama-4-maverick-17b-128e-instruct-fp8';
+                if (!apiKey) {
+                  showNotification('Error: Lambda.ai API key not set. Please set it in options.');
+                  return;
+                }
+                break;
+              
+              case 'openrouter':
+              default:
+                apiKey = data.openrouterApiKey;
+                model = data.openrouterModel || 'anthropic/claude-3-5-sonnet';
+                if (!apiKey) {
+                  showNotification('Error: OpenRouter API key not set. Please set it in options.');
+                  return;
+                }
+                break;
+            }
+            
             // Choose the appropriate system prompt based on whether text is selected
             const systemPrompt = selectedText 
               ? (data.systemPrompt || '') 
               : (data.insertSystemPrompt || '');
             debugLog('Using system prompt for:', selectedText ? 'transformation' : 'insertion');
-            if (!apiKey) {
-              showNotification('Error: OpenRouter API key not set. Please set it in options.');
-              return;
-            }
+            
             // Ensure llm.js is loaded before using callLLM
             await llmReady;
-            // Call LLM API with the system prompt
-            const generatedText = await callLLM({ promptText, selectedText, apiKey, model, systemPrompt });
+            
+            // Call LLM API with the system prompt and provider
+            const generatedText = await callLLM({ promptText, selectedText, apiKey, model, provider, systemPrompt });
+            
+            // Clear loading notification before performing replacement
+            clearLoadingNotification();
+            
             // Perform replacement with the generated text
             performReplacement(generatedText);
           } catch (error) {
-            console.error('Error calling OpenRouter:', error);
+            console.error('Error calling LLM API:', error);
+            clearLoadingNotification();
             showNotification('Error: ' + (error.message || 'Failed to generate text with LLM'));
           }
         });
       } else {
+        clearLoadingNotification();
         showNotification('Chrome storage API not available');
       }
     } catch (error) {
       console.error('Error accessing chrome storage:', error);
+      clearLoadingNotification();
       showNotification('Extension context invalidated. Please reload the page or extension.');
     }
   });
@@ -349,6 +483,8 @@ function performReplacement(replacementText) {
     showNotification(`Text ${actionText} with LLM content: "${displayText}"`);
   } catch (error) {
     console.error('LLMPaste error:', error);
+    clearLoadingNotification();
+    showNotification('Error applying text: ' + error.message);
     // Try fallback approach
     debugLog('Attempting fallback approach');
     attemptFallbackApproach(selection, replacementText);
@@ -617,29 +753,37 @@ function sendCtrlShiftRightArrowMultipleTimes(times) {
 async function attemptFallbackApproach(selection, replacementWord) {
   debugLog('Using fallback approach');
   
-  // Try using execCommand
-  if (document.execCommand) {
-    debugLog('Trying execCommand fallback');
-    
-    // If selection is empty, just insert; otherwise cut and paste
-    if (selection.toString() === '') {
-      document.execCommand('insertText', false, replacementWord);
-    } else {
-      document.execCommand('cut');
-      document.execCommand('insertText', false, replacementWord);
+  try {
+    // Try using execCommand
+    if (document.execCommand) {
+      debugLog('Trying execCommand fallback');
+      
+      // If selection is empty, just insert; otherwise cut and paste
+      if (selection.toString() === '') {
+        document.execCommand('insertText', false, replacementWord);
+      } else {
+        document.execCommand('cut');
+        document.execCommand('insertText', false, replacementWord);
+      }
+    } else if (selection.rangeCount > 0) {
+      // Last resort DOM manipulation
+      debugLog('Trying direct DOM manipulation');
+      const range = selection.getRangeAt(0);
+      
+      // If selection is empty, don't delete anything
+      if (selection.toString() !== '') {
+        range.deleteContents();
+      }
+      
+      range.insertNode(document.createTextNode(replacementWord));
     }
-  } else if (selection.rangeCount > 0) {
-    // Last resort DOM manipulation
-    debugLog('Trying direct DOM manipulation');
-    const range = selection.getRangeAt(0);
     
-    // If selection is empty, don't delete anything
-    if (selection.toString() !== '') {
-      range.deleteContents();
-    }
-    
-    range.insertNode(document.createTextNode(replacementWord));
+    // Clear any loading notification that might still be showing
+    clearLoadingNotification();
+    showNotification(`Text replaced with: "${replacementWord}"`);
+  } catch (error) {
+    console.error('Fallback approach failed:', error);
+    clearLoadingNotification();
+    showNotification('All replacement methods failed. Please try again.');
   }
-  
-  showNotification(`Text replaced with: "${replacementWord}"`);
 } 
