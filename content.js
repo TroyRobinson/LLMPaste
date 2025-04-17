@@ -156,15 +156,108 @@ function showFloatingEditor() {
   editorContainer.style.display = 'flex';
   editorContainer.style.flexDirection = 'column';
   editorContainer.style.gap = '10px';
-  editorContainer.style.minWidth = '250px';
+  editorContainer.style.minWidth = '300px';
   
   // Add title
   const title = document.createElement('div');
   title.textContent = lastSelectedText ? 'LLMPaste - Transform Text' : 'LLMPaste - Insert Code';
   title.style.fontWeight = 'bold';
   title.style.fontSize = '14px';
-  title.style.marginBottom = '5px';
+  title.style.marginBottom = '2px';
   editorContainer.appendChild(title);
+  
+  // Add active model display
+  const modelInfoContainer = document.createElement('div');
+  modelInfoContainer.style.fontSize = '12px';
+  modelInfoContainer.style.color = '#666';
+  modelInfoContainer.style.marginBottom = '8px';
+  modelInfoContainer.style.display = 'flex';
+  modelInfoContainer.style.justifyContent = 'space-between';
+  modelInfoContainer.style.padding = '4px 8px';
+  modelInfoContainer.style.backgroundColor = '#f5f5f5';
+  modelInfoContainer.style.borderRadius = '4px';
+  
+  // Left side - active model info
+  const activeModelInfo = document.createElement('div');
+  activeModelInfo.id = 'activeModelInfo';
+  activeModelInfo.innerHTML = 'Active: <span id="activeModelName">Default model</span> <span id="activeModelSlot">(slot 1)</span>';
+  modelInfoContainer.appendChild(activeModelInfo);
+  
+  // Right side - shortcuts info
+  const shortcutsInfo = document.createElement('div');
+  shortcutsInfo.style.color = '#4285f4';
+  shortcutsInfo.style.cursor = 'pointer';
+  shortcutsInfo.textContent = 'Model shortcuts';
+  shortcutsInfo.title = 'Shift+Enter: Slot 2, Ctrl+Enter: Slot 3, Alt+Enter: Slot 4, Cmd+Enter: Slot 5';
+  
+  // Add tooltip behavior
+  shortcutsInfo.addEventListener('click', () => {
+    const tooltipContent = `
+      <div style="font-size: 11px; line-height: 1.4;">
+        <div style="font-weight: bold; margin-bottom: 3px;">Model Selection:</div>
+        <div>Enter: Slot 1 (default)</div>
+        <div>Shift+Enter: Slot 2</div>
+        <div>Ctrl+Enter: Slot 3</div>
+        <div>Alt/Option+Enter: Slot 4</div>
+        <div>Command/Meta+Enter: Slot 5</div>
+      </div>
+    `;
+    
+    // Check if tooltip already exists and remove it
+    const existingTooltip = document.getElementById('model-shortcuts-tooltip');
+    if (existingTooltip) {
+      existingTooltip.remove();
+      return;
+    }
+    
+    // Create tooltip
+    const tooltip = document.createElement('div');
+    tooltip.id = 'model-shortcuts-tooltip';
+    tooltip.style.position = 'absolute';
+    tooltip.style.right = '0';
+    tooltip.style.top = '20px';
+    tooltip.style.backgroundColor = 'white';
+    tooltip.style.padding = '8px';
+    tooltip.style.borderRadius = '4px';
+    tooltip.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+    tooltip.style.zIndex = '9999999';
+    tooltip.style.width = '180px';
+    tooltip.innerHTML = tooltipContent;
+    
+    // Add to container
+    modelInfoContainer.style.position = 'relative';
+    modelInfoContainer.appendChild(tooltip);
+    
+    // Auto close after 5 seconds
+    setTimeout(() => {
+      if (tooltip.parentNode) {
+        tooltip.remove();
+      }
+    }, 5000);
+  });
+  
+  modelInfoContainer.appendChild(shortcutsInfo);
+  editorContainer.appendChild(modelInfoContainer);
+  
+  // Update active model info from storage
+  chrome.storage.local.get(['activeModelSlot', 'activeModelName', 'activeModelProvider'], (data) => {
+    const modelNameEl = document.getElementById('activeModelName');
+    const modelSlotEl = document.getElementById('activeModelSlot');
+    
+    if (modelNameEl && data.activeModelName) {
+      // Format the display name (show only model part after the slash if present)
+      let displayName = data.activeModelName;
+      if (displayName.includes('/')) {
+        displayName = displayName.split('/')[1];
+      }
+      
+      modelNameEl.textContent = `${displayName} (${data.activeModelProvider || 'default'})`;
+    }
+    
+    if (modelSlotEl && data.activeModelSlot) {
+      modelSlotEl.textContent = `(slot ${data.activeModelSlot})`;
+    }
+  });
   
   // Add close button
   const closeButton = document.createElement('div');
@@ -291,86 +384,130 @@ function showFloatingEditor() {
             return;
           }
           try {
-            // Determine which provider to use
-            const provider = data.llmProvider || 'openrouter';
-            
-            // Get the appropriate API key and model based on provider
-            let apiKey, model;
-            
-            switch (provider) {
-              case 'cerebras':
-                apiKey = data.cerebrasApiKey;
-                model = data.cerebrasModel || 'llama3.1-8b';
-                if (!apiKey) {
-                  showNotification('Error: Cerebras API key not set. Please set it in options.');
-                  return;
-                }
-                break;
+            // Check if there's an active model slot selected from the popup
+            chrome.storage.local.get(['activeModelSlot', 'activeModelProvider', 'activeModelName'], async (slotData) => {
+              const activeSlot = slotData.activeModelSlot || 1;
+              debugLog('Using model slot:', activeSlot);
               
-              case 'groq':
-                apiKey = data.groqApiKey;
-                model = data.groqModel || 'llama-3.3-70b-versatile';
-                if (!apiKey) {
-                  showNotification('Error: Groq API key not set. Please set it in options.');
-                  return;
-                }
-                break;
+              // Get the provider and model from the active slot
+              // First check if we have direct provider/model data from popup
+              let slotProvider, slotModel;
               
-              case 'sambanova':
-                apiKey = data.sambanovaApiKey;
-                model = data.sambanovaModel || 'Llama-4-Maverick-17B-128E-Instruct';
-                if (!apiKey) {
-                  showNotification('Error: SambaNova API key not set. Please set it in options.');
-                  return;
+              if (slotData.activeModelProvider && slotData.activeModelName) {
+                debugLog('Using directly stored provider and model');
+                slotProvider = slotData.activeModelProvider;
+                
+                // If the model name doesn't have a prefix, we need to reconstruct it
+                if (slotData.activeModelName.includes('/')) {
+                  slotModel = slotData.activeModelName;
+                } else {
+                  // Check if we have the full model name from storage
+                  slotModel = data[`modelSlot${activeSlot}Model`];
+                  
+                  // If we can't find the full model, use the name as is
+                  if (!slotModel) {
+                    slotModel = slotData.activeModelName;
+                  }
                 }
-                break;
+              } else {
+                // Fallback to getting from data using slot number
+                slotProvider = data[`modelSlot${activeSlot}Provider`];
+                slotModel = data[`modelSlot${activeSlot}Model`];
+              }
               
-              case 'klusterai':
-                apiKey = data.klusteraiApiKey;
-                model = data.klusteraiModel || 'klusterai/Meta-Llama-3.1-8B-Instruct-Turbo';
-                if (!apiKey) {
-                  showNotification('Error: Kluster.ai API key not set. Please set it in options.');
-                  return;
-                }
-                break;
+              debugLog('Active model provider:', slotProvider);
+              debugLog('Active model name:', slotModel);
               
-              case 'lambdaai':
-                apiKey = data.lambdaaiApiKey;
-                model = data.lambdaaiModel || 'llama-4-maverick-17b-128e-instruct-fp8';
-                if (!apiKey) {
-                  showNotification('Error: Lambda.ai API key not set. Please set it in options.');
-                  return;
-                }
-                break;
+              // If we have valid slot data, use it; otherwise fall back to default provider settings
+              const provider = slotProvider || data.llmProvider || 'openrouter';
+              let apiKey, model;
               
-              case 'openrouter':
-              default:
-                apiKey = data.openrouterApiKey;
-                model = data.openrouterModel || 'anthropic/claude-3-5-sonnet';
-                if (!apiKey) {
-                  showNotification('Error: OpenRouter API key not set. Please set it in options.');
-                  return;
-                }
-                break;
-            }
+              if (slotModel) {
+                // Use the model from the slot
+                model = slotModel;
+              }
+              
+              // Get API key based on provider
+              switch (provider) {
+                case 'cerebras':
+                  apiKey = data.cerebrasApiKey;
+                  if (!model) model = data.cerebrasModel || 'llama3.1-8b';
+                  if (!apiKey) {
+                    showNotification('Error: Cerebras API key not set. Please set it in options.');
+                    return;
+                  }
+                  break;
+                
+                case 'groq':
+                  apiKey = data.groqApiKey;
+                  if (!model) model = data.groqModel || 'llama-3.3-70b-versatile';
+                  if (!apiKey) {
+                    showNotification('Error: Groq API key not set. Please set it in options.');
+                    return;
+                  }
+                  break;
+                
+                case 'sambanova':
+                  apiKey = data.sambanovaApiKey;
+                  if (!model) model = data.sambanovaModel || 'Llama-4-Maverick-17B-128E-Instruct';
+                  if (!apiKey) {
+                    showNotification('Error: SambaNova API key not set. Please set it in options.');
+                    return;
+                  }
+                  break;
+                
+                case 'klusterai':
+                  apiKey = data.klusteraiApiKey;
+                  if (!model) model = data.klusteraiModel || 'klusterai/Meta-Llama-3.1-8B-Instruct-Turbo';
+                  if (!apiKey) {
+                    showNotification('Error: Kluster.ai API key not set. Please set it in options.');
+                    return;
+                  }
+                  break;
+                
+                case 'lambdaai':
+                  apiKey = data.lambdaaiApiKey;
+                  if (!model) model = data.lambdaaiModel || 'llama-4-maverick-17b-128e-instruct-fp8';
+                  if (!apiKey) {
+                    showNotification('Error: Lambda.ai API key not set. Please set it in options.');
+                    return;
+                  }
+                  break;
+                
+                case 'openrouter':
+                default:
+                  apiKey = data.openrouterApiKey;
+                  if (!model) model = data.openrouterModel || 'anthropic/claude-3-5-sonnet';
+                  if (!apiKey) {
+                    showNotification('Error: OpenRouter API key not set. Please set it in options.');
+                    return;
+                  }
+                  break;
+              }
+              
+              debugLog(`Using provider: ${provider}, model: ${model}, slot: ${activeSlot}`);
+              
+              // Reset the active slot after use
+              chrome.storage.local.remove('activeModelSlot');
             
-            // Choose the appropriate system prompt based on whether text is selected
-            const systemPrompt = selectedText 
-              ? (data.systemPrompt || '') 
-              : (data.insertSystemPrompt || '');
-            debugLog('Using system prompt for:', selectedText ? 'transformation' : 'insertion');
-            
-            // Ensure llm.js is loaded before using callLLM
-            await llmReady;
-            
-            // Call LLM API with the system prompt and provider
-            const generatedText = await callLLM({ promptText, selectedText, apiKey, model, provider, systemPrompt });
-            
-            // Clear loading notification before performing replacement
-            clearLoadingNotification();
-            
-            // Perform replacement with the generated text
-            performReplacement(generatedText);
+              // Choose the appropriate system prompt based on whether text is selected
+              const systemPrompt = selectedText 
+                ? (data.systemPrompt || '') 
+                : (data.insertSystemPrompt || '');
+              debugLog('Using system prompt for:', selectedText ? 'transformation' : 'insertion');
+              
+              // Ensure llm.js is loaded before using callLLM
+              await llmReady;
+              
+              // Call LLM API with the system prompt and provider
+              const generatedText = await callLLM({ promptText, selectedText, apiKey, model, provider, systemPrompt });
+              
+              // Clear loading notification before performing replacement
+              clearLoadingNotification();
+              
+              // Perform replacement with the generated text
+              performReplacement(generatedText);
+            });
           } catch (error) {
             console.error('Error calling LLM API:', error);
             clearLoadingNotification();
@@ -408,13 +545,202 @@ function showFloatingEditor() {
   buttonContainer.appendChild(cancelButton);
   editorContainer.appendChild(buttonContainer);
   
-  // Handle Enter key in textarea
+  // Track which modifier key is currently pressed
+  let currentKeyModifier = null;
+  
+  // Update model slot display based on key presses
+  function updateModelSlotDisplay(slotNum) {
+    const modelNameEl = document.getElementById('activeModelName');
+    const modelSlotEl = document.getElementById('activeModelSlot');
+    
+    if (!modelNameEl || !modelSlotEl) return;
+    
+    // First update the slot number visually
+    modelSlotEl.textContent = `(slot ${slotNum})`;
+    
+    // Then load the model data for that slot
+    chrome.storage.sync.get([
+      `modelSlot${slotNum}Provider`,
+      `modelSlot${slotNum}Model`
+    ], (data) => {
+      const provider = data[`modelSlot${slotNum}Provider`] || 'openrouter';
+      const model = data[`modelSlot${slotNum}Model`] || 'Default model';
+      
+      // Format display name
+      let displayName = model;
+      if (displayName.includes('/')) {
+        displayName = displayName.split('/')[1];
+      }
+      
+      modelNameEl.textContent = `${displayName} (${provider})`;
+      
+      // Update storage for content script to use
+      chrome.storage.local.set({
+        'activeModelSlot': slotNum,
+        'activeModelName': model,
+        'activeModelProvider': provider
+      });
+      
+      debugLog(`Updated model slot to ${slotNum}: ${model} (${provider})`);
+    });
+  }
+  
+  // Handle keydown events for modifier keys and Enter
   textarea.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      replaceButton.click();
-    } else if (e.key === 'Escape') {
+    // Handle Enter key for submission with modifiers
+    if (e.key === 'Enter') {
+      // With shift modifier = Slot 2
+      if (e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        e.preventDefault();
+        updateModelSlotDisplay(2);
+        currentKeyModifier = 'shift';
+        replaceButton.click();
+      }
+      // With ctrl modifier = Slot 3
+      else if (e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey) {
+        e.preventDefault();
+        updateModelSlotDisplay(3);
+        currentKeyModifier = 'ctrl';
+        replaceButton.click();
+      }
+      // With alt modifier = Slot 4
+      else if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
+        e.preventDefault();
+        updateModelSlotDisplay(4);
+        currentKeyModifier = 'alt';
+        replaceButton.click();
+      }
+      // With meta/cmd modifier = Slot 5
+      else if (e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        updateModelSlotDisplay(5);
+        currentKeyModifier = 'meta';
+        replaceButton.click();
+      }
+      // No modifiers = default slot 1
+      else if (!e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        e.preventDefault();
+        updateModelSlotDisplay(1);
+        replaceButton.click();
+      }
+    } 
+    // Handle Escape key to close
+    else if (e.key === 'Escape') {
       editorContainer.remove();
+    }
+    // For just holding modifier keys (preview without Enter)
+    else {
+      // Just Shift = preview Slot 2
+      if (e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && currentKeyModifier !== 'shift') {
+        currentKeyModifier = 'shift';
+        const modelNameEl = document.getElementById('activeModelName');
+        const modelSlotEl = document.getElementById('activeModelSlot');
+        if (modelNameEl) modelNameEl.style.color = '#4285f4'; // Highlight in blue
+        if (modelSlotEl) modelSlotEl.textContent = '(slot 2)';
+        
+        // Fetch model info for slot 2
+        chrome.storage.sync.get(['modelSlot2Provider', 'modelSlot2Model'], (data) => {
+          if (modelNameEl && data.modelSlot2Model) {
+            const displayName = data.modelSlot2Model.includes('/') ? 
+              data.modelSlot2Model.split('/')[1] : data.modelSlot2Model;
+            modelNameEl.textContent = `${displayName} (${data.modelSlot2Provider || 'openrouter'})`;
+          }
+        });
+      }
+      // Just Ctrl = preview Slot 3
+      else if (e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && currentKeyModifier !== 'ctrl') {
+        currentKeyModifier = 'ctrl';
+        const modelNameEl = document.getElementById('activeModelName');
+        const modelSlotEl = document.getElementById('activeModelSlot');
+        if (modelNameEl) modelNameEl.style.color = '#4285f4';
+        if (modelSlotEl) modelSlotEl.textContent = '(slot 3)';
+        
+        chrome.storage.sync.get(['modelSlot3Provider', 'modelSlot3Model'], (data) => {
+          if (modelNameEl && data.modelSlot3Model) {
+            const displayName = data.modelSlot3Model.includes('/') ? 
+              data.modelSlot3Model.split('/')[1] : data.modelSlot3Model;
+            modelNameEl.textContent = `${displayName} (${data.modelSlot3Provider || 'openrouter'})`;
+          }
+        });
+      }
+      // Just Alt = preview Slot 4
+      else if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey && currentKeyModifier !== 'alt') {
+        currentKeyModifier = 'alt';
+        const modelNameEl = document.getElementById('activeModelName');
+        const modelSlotEl = document.getElementById('activeModelSlot');
+        if (modelNameEl) modelNameEl.style.color = '#4285f4';
+        if (modelSlotEl) modelSlotEl.textContent = '(slot 4)';
+        
+        chrome.storage.sync.get(['modelSlot4Provider', 'modelSlot4Model'], (data) => {
+          if (modelNameEl && data.modelSlot4Model) {
+            const displayName = data.modelSlot4Model.includes('/') ? 
+              data.modelSlot4Model.split('/')[1] : data.modelSlot4Model;
+            modelNameEl.textContent = `${displayName} (${data.modelSlot4Provider || 'openrouter'})`;
+          }
+        });
+      }
+      // Just Meta/Cmd = preview Slot 5
+      else if (e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && currentKeyModifier !== 'meta') {
+        currentKeyModifier = 'meta';
+        const modelNameEl = document.getElementById('activeModelName');
+        const modelSlotEl = document.getElementById('activeModelSlot');
+        if (modelNameEl) modelNameEl.style.color = '#4285f4';
+        if (modelSlotEl) modelSlotEl.textContent = '(slot 5)';
+        
+        chrome.storage.sync.get(['modelSlot5Provider', 'modelSlot5Model'], (data) => {
+          if (modelNameEl && data.modelSlot5Model) {
+            const displayName = data.modelSlot5Model.includes('/') ? 
+              data.modelSlot5Model.split('/')[1] : data.modelSlot5Model;
+            modelNameEl.textContent = `${displayName} (${data.modelSlot5Provider || 'openrouter'})`;
+          }
+        });
+      }
+    }
+  });
+  
+  // Reset when modifier keys are released
+  textarea.addEventListener('keyup', (e) => {
+    // Skip handling if Enter key (that's for submission)
+    if (e.key === 'Enter') return;
+    
+    // If all modifiers are released, reset display
+    if (!e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && currentKeyModifier) {
+      currentKeyModifier = null;
+      
+      const modelNameEl = document.getElementById('activeModelName');
+      const modelSlotEl = document.getElementById('activeModelSlot');
+      
+      if (modelNameEl) {
+        modelNameEl.style.color = ''; // Reset color
+        
+        // Re-fetch the default model info
+        chrome.storage.local.get(['activeModelSlot', 'activeModelName', 'activeModelProvider'], (data) => {
+          // If we have previously selected something, show that
+          if (data.activeModelName) {
+            let displayName = data.activeModelName;
+            if (displayName.includes('/')) {
+              displayName = displayName.split('/')[1];
+            }
+            modelNameEl.textContent = `${displayName} (${data.activeModelProvider || 'default'})`;
+          } else {
+            // Otherwise load slot 1 details
+            chrome.storage.sync.get(['modelSlot1Provider', 'modelSlot1Model'], (slotData) => {
+              if (slotData.modelSlot1Model) {
+                const displayName = slotData.modelSlot1Model.includes('/') ? 
+                  slotData.modelSlot1Model.split('/')[1] : slotData.modelSlot1Model;
+                modelNameEl.textContent = `${displayName} (${slotData.modelSlot1Provider || 'openrouter'})`;
+              }
+            });
+          }
+        });
+      }
+      
+      // Reset slot display
+      if (modelSlotEl) {
+        chrome.storage.local.get('activeModelSlot', (data) => {
+          modelSlotEl.textContent = `(slot ${data.activeModelSlot || 1})`;
+        });
+      }
     }
   });
   

@@ -159,6 +159,74 @@
     <label for="insertSystemPrompt">System Prompt (for inserting at cursor):</label>
     <textarea id="insertSystemPrompt" rows="4" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace;">Generate concise, ready-to-use code based on the prompt. Provide ONLY code without explanations, markdown formatting, or backticks. Do not add comments unless explicitly requested.</textarea>
   </div>
+
+  <h2 style="margin-top: 20px; font-size: 18px;">Quick Model Slots</h2>
+  <p style="margin-bottom: 15px; font-size: 14px; color: #666;">Configure up to 5 slots with different providers/models for quick switching in the popup.</p>
+  
+  <div class="form-group">
+    <label for="modelSlot1">Slot 1 (Default - Enter):</label>
+    <select id="modelSlot1Provider" style="width: 30%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;">
+      <option value="openrouter">OpenRouter</option>
+      <option value="cerebras">Cerebras</option>
+      <option value="groq">Groq</option>
+      <option value="sambanova">SambaNova</option>
+      <option value="klusterai">Kluster.ai</option>
+      <option value="lambdaai">Lambda.ai</option>
+    </select>
+    <input type="text" id="modelSlot1" placeholder="Model for slot 1" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+  </div>
+  
+  <div class="form-group">
+    <label for="modelSlot2">Slot 2 (Shift+Enter):</label>
+    <select id="modelSlot2Provider" style="width: 30%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;">
+      <option value="openrouter">OpenRouter</option>
+      <option value="cerebras">Cerebras</option>
+      <option value="groq">Groq</option>
+      <option value="sambanova">SambaNova</option>
+      <option value="klusterai">Kluster.ai</option>
+      <option value="lambdaai">Lambda.ai</option>
+    </select>
+    <input type="text" id="modelSlot2" placeholder="Model for slot 2" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+  </div>
+  
+  <div class="form-group">
+    <label for="modelSlot3">Slot 3 (Ctrl+Enter):</label>
+    <select id="modelSlot3Provider" style="width: 30%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;">
+      <option value="openrouter">OpenRouter</option>
+      <option value="cerebras">Cerebras</option>
+      <option value="groq">Groq</option>
+      <option value="sambanova">SambaNova</option>
+      <option value="klusterai">Kluster.ai</option>
+      <option value="lambdaai">Lambda.ai</option>
+    </select>
+    <input type="text" id="modelSlot3" placeholder="Model for slot 3" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+  </div>
+  
+  <div class="form-group">
+    <label for="modelSlot4">Slot 4 (Option/Alt+Enter):</label>
+    <select id="modelSlot4Provider" style="width: 30%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;">
+      <option value="openrouter">OpenRouter</option>
+      <option value="cerebras">Cerebras</option>
+      <option value="groq">Groq</option>
+      <option value="sambanova">SambaNova</option>
+      <option value="klusterai">Kluster.ai</option>
+      <option value="lambdaai">Lambda.ai</option>
+    </select>
+    <input type="text" id="modelSlot4" placeholder="Model for slot 4" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+  </div>
+  
+  <div class="form-group">
+    <label for="modelSlot5">Slot 5 (Command/Meta+Enter):</label>
+    <select id="modelSlot5Provider" style="width: 30%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;">
+      <option value="openrouter">OpenRouter</option>
+      <option value="cerebras">Cerebras</option>
+      <option value="groq">Groq</option>
+      <option value="sambanova">SambaNova</option>
+      <option value="klusterai">Kluster.ai</option>
+      <option value="lambdaai">Lambda.ai</option>
+    </select>
+    <input type="text" id="modelSlot5" placeholder="Model for slot 5" style="width: 65%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+  </div>
   
   <button id="saveBtn">Save Settings</button>
   

@@ -21,6 +21,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const klusteraiModelInput = document.getElementById('klusteraiModel');
   const lambdaaiModelInput = document.getElementById('lambdaaiModel');
   
+  // Model slot inputs
+  const modelSlot1Provider = document.getElementById('modelSlot1Provider');
+  const modelSlot2Provider = document.getElementById('modelSlot2Provider');
+  const modelSlot3Provider = document.getElementById('modelSlot3Provider');
+  const modelSlot4Provider = document.getElementById('modelSlot4Provider');
+  const modelSlot5Provider = document.getElementById('modelSlot5Provider');
+  const modelSlot1Input = document.getElementById('modelSlot1');
+  const modelSlot2Input = document.getElementById('modelSlot2');
+  const modelSlot3Input = document.getElementById('modelSlot3');
+  const modelSlot4Input = document.getElementById('modelSlot4');
+  const modelSlot5Input = document.getElementById('modelSlot5');
+  
   const systemPromptInput = document.getElementById('systemPrompt');
   const insertSystemPromptInput = document.getElementById('insertSystemPrompt');
   const saveBtn = document.getElementById('saveBtn');
@@ -63,7 +75,18 @@ document.addEventListener('DOMContentLoaded', () => {
     'lambdaaiModel',
     // Prompts
     'systemPrompt', 
-    'insertSystemPrompt'
+    'insertSystemPrompt',
+    // Model slots
+    'modelSlot1Provider',
+    'modelSlot1Model',
+    'modelSlot2Provider',
+    'modelSlot2Model',
+    'modelSlot3Provider',
+    'modelSlot3Model',
+    'modelSlot4Provider',
+    'modelSlot4Model',
+    'modelSlot5Provider',
+    'modelSlot5Model'
   ], (data) => {
     promptInput.value = data.replacementWord || 'cat';
     
@@ -96,6 +119,31 @@ document.addEventListener('DOMContentLoaded', () => {
     if (data.insertSystemPrompt) {
       insertSystemPromptInput.value = data.insertSystemPrompt;
     }
+    
+    // Set model slots
+    // Default slot 1 to the current provider and model
+    modelSlot1Provider.value = data.modelSlot1Provider || data.llmProvider || 'openrouter';
+    modelSlot1Input.value = data.modelSlot1Model || (
+      modelSlot1Provider.value === 'openrouter' ? (data.openrouterModel || 'anthropic/claude-3-5-sonnet') :
+      modelSlot1Provider.value === 'cerebras' ? (data.cerebrasModel || 'llama3.1-8b') :
+      modelSlot1Provider.value === 'groq' ? (data.groqModel || 'llama-3.3-70b-versatile') :
+      modelSlot1Provider.value === 'sambanova' ? (data.sambanovaModel || 'Llama-4-Maverick-17B-128E-Instruct') :
+      modelSlot1Provider.value === 'klusterai' ? (data.klusteraiModel || 'klusterai/Meta-Llama-3.1-8B-Instruct-Turbo') :
+      data.lambdaaiModel || 'llama-4-maverick-17b-128e-instruct-fp8'
+    );
+    
+    // Set other slots with defaults
+    modelSlot2Provider.value = data.modelSlot2Provider || 'openrouter';
+    modelSlot2Input.value = data.modelSlot2Model || 'anthropic/claude-3-opus-20240229';
+    
+    modelSlot3Provider.value = data.modelSlot3Provider || 'openrouter';
+    modelSlot3Input.value = data.modelSlot3Model || 'openai/gpt-4o';
+    
+    modelSlot4Provider.value = data.modelSlot4Provider || 'groq';
+    modelSlot4Input.value = data.modelSlot4Model || 'llama-3.3-70b-versatile';
+    
+    modelSlot5Provider.value = data.modelSlot5Provider || 'openrouter';
+    modelSlot5Input.value = data.modelSlot5Model || 'meta-llama/llama-3-70b-instruct';
   });
   
   // Save settings when the button is clicked
@@ -119,6 +167,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const klusteraiModel = klusteraiModelInput.value.trim() || 'klusterai/Meta-Llama-3.1-8B-Instruct-Turbo';
     const lambdaaiModel = lambdaaiModelInput.value.trim() || 'llama-4-maverick-17b-128e-instruct-fp8';
     
+    // Get model slots values
+    const slot1Provider = modelSlot1Provider.value;
+    const slot1Model = modelSlot1Input.value.trim();
+    const slot2Provider = modelSlot2Provider.value;
+    const slot2Model = modelSlot2Input.value.trim();
+    const slot3Provider = modelSlot3Provider.value;
+    const slot3Model = modelSlot3Input.value.trim();
+    const slot4Provider = modelSlot4Provider.value;
+    const slot4Model = modelSlot4Input.value.trim();
+    const slot5Provider = modelSlot5Provider.value;
+    const slot5Model = modelSlot5Input.value.trim();
+    
     const systemPrompt = systemPromptInput.value.trim();
     const insertSystemPrompt = insertSystemPromptInput.value.trim();
     
@@ -140,6 +200,17 @@ document.addEventListener('DOMContentLoaded', () => {
       sambanovaModel,
       klusteraiModel,
       lambdaaiModel,
+      // Model slots
+      modelSlot1Provider: slot1Provider,
+      modelSlot1Model: slot1Model,
+      modelSlot2Provider: slot2Provider,
+      modelSlot2Model: slot2Model,
+      modelSlot3Provider: slot3Provider,
+      modelSlot3Model: slot3Model,
+      modelSlot4Provider: slot4Provider,
+      modelSlot4Model: slot4Model,
+      modelSlot5Provider: slot5Provider,
+      modelSlot5Model: slot5Model,
       // Prompts
       systemPrompt,
       insertSystemPrompt
