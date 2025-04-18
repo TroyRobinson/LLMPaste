@@ -1196,6 +1196,25 @@ document.addEventListener('keydown', (event) => {
     event.preventDefault();
     sendCtrlShiftRightArrowMultipleTimes(5);
   }
+  // New shortcut: Ctrl+Shift+U
+  if (event.ctrlKey && event.shiftKey && (event.key === 'U' || event.key === 'u')) {
+    debugLog('Keyboard shortcut detected: Ctrl+Shift+U');
+    event.preventDefault();
+    const iframe = document.getElementById('vscode-editor');
+    const iframeDoc = iframe?.contentDocument || iframe?.contentWindow?.document;
+
+    if (iframeDoc) {
+      const textarea = iframeDoc.querySelector('textarea');
+      if (textarea) {
+        textarea.focus();
+        console.log('Focused textarea inside iframe!');
+      } else {
+        console.warn('No textarea found inside iframe.');
+      }
+    } else {
+      console.error('Unable to access iframe contents — likely due to cross-origin restrictions.');
+    }
+  }
 });
 
 // Detect the type of editor we're dealing with
